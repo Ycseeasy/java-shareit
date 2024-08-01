@@ -15,10 +15,11 @@ import java.util.stream.Collectors;
 public class InMemoryItemRepository implements ItemRepository {
 
     private final HashMap<Long, Item> itemData = new HashMap<>();
+    private long counter = 1;
 
     @Override
     public Item create(Item item) {
-        item.setId(getNextId());
+        item.setId(counter++);
         itemData.put(item.getId(), item);
         return item;
     }
@@ -61,20 +62,9 @@ public class InMemoryItemRepository implements ItemRepository {
             return new ArrayList<>();
         }
         return itemData.values().stream()
-                .filter(item -> {
-                    return item.getAvailable().equals("true")
+                .filter(item -> item.getAvailable().equals("true")
                             && item.getName().toLowerCase().contains(query.toLowerCase())
-                            || item.getDescription().toLowerCase().contains(query.toLowerCase());
-                })
+                            || item.getDescription().toLowerCase().contains(query.toLowerCase()))
                 .collect(Collectors.toList());
-    }
-
-    private long getNextId() {
-        long currentMaxId = itemData.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
     }
 }

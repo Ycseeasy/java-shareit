@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.dto.UserDtoMapper;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
@@ -19,18 +21,26 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
     @Override
-    public User createUser(User user) {
+    public UserDto createUser(UserDto userDto) {
+        User user = UserDtoMapper.fromDTO(userDto);
         validate(user);
-        return userRepository.create(user);
+        User createdUser = userRepository.create(user);
+        return UserDtoMapper.toDTO(createdUser);
     }
 
     @Override
-    public User updateUser(Long userId, User mewUser) {
-        User oldUser = getUser(userId);
-        mewUser.setId(userId);
-        User updateDUser = userRepository.update(oldUser, mewUser);
-        validate(updateDUser);
-        return updateDUser;
+    public UserDto updateUser(Long userId, UserDto userDto) {
+        User newUser = UserDtoMapper.fromDTO(userDto);
+        Optional<User> result = userRepository.get(userId);
+        if (result.isPresent()) {
+            User oldUser = result.get();
+            newUser.setId(userId);
+            User updateDUser = userRepository.update(oldUser, newUser);
+            validate(updateDUser);
+            return UserDtoMapper.toDTO(updateDUser);
+        } else {
+            throw new NotFoundException("Пользователь с ID - " + userId + " не найден.");
+        }
     }
 
     @Override
@@ -42,25 +52,29 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUser(Long userId) {
+    public UserDto getUser(Long userId) {
         Optional<User> result = userRepository.get(userId);
         if (result.isPresent()) {
-            return result.get();
+            User searchResult = result.get();
+            return UserDtoMapper.toDTO(searchResult);
         } else {
             throw new NotFoundException("Пользователь с ID - " + userId + " не найден.");
         }
     }
 
     @Override
-    public Collection<User> getAllUsers() {
-        return userRepository.getAll();
+    public Collection<UserDto> getAllUsers() {
+        return userRepository.getAll()
+                .stream()
+                .map(UserDtoMapper::toDTO)
+                .toList();
     }
 
     private void validate(User user) {
-        if (user.getName() == null || user.getName().isEmpty()) {
+        if (user.getName() == null || user.getName().isBlank()) {
             throw new ValidationException("Поле Name не может быть пустым");
         }
-        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
             throw new ValidationException("Поле Email не может быть пустым");
         }
         if (!user.getEmail().contains("@")) {

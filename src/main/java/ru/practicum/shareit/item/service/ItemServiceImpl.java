@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
+import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemDtoMapper;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.user.model.User;
@@ -21,37 +23,52 @@ public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepository;
 
     @Override
-    public Item createItem(Item item) {
+    public ItemDto createItem(ItemDto itemDto, Long userId) {
+        Item item = ItemDtoMapper.fromDTO(userId, itemDto);
         validate(item);
-        return itemRepository.create(item);
+        Item createdItem = itemRepository.create(item);
+        return ItemDtoMapper.toDTO(createdItem);
     }
 
     @Override
-    public Item updateItem(Long itemId, Item item) {
-        Item oldItem = getItem(itemId);
-        Item updatedItem = itemRepository.update(oldItem, item);
-        validate(updatedItem);
-        return updatedItem;
-    }
-
-    @Override
-    public Item getItem(Long itemId) {
+    public ItemDto updateItem(Long itemId, ItemDto itemDto, Long userId) {
+        Item item = ItemDtoMapper.fromDTO(userId, itemDto);
         Optional<Item> searchedItem = itemRepository.get(itemId);
         if (searchedItem.isPresent()) {
-            return searchedItem.get();
+            Item oldItem = searchedItem.get();
+            Item updatedItem = itemRepository.update(oldItem, item);
+            validate(updatedItem);
+            return ItemDtoMapper.toDTO(updatedItem);
         } else {
             throw new NotFoundException("Инструмент с ID - " + itemId + " не найден.");
         }
     }
 
     @Override
-    public Collection<Item> getAllOwnerItems(Long userId) {
-        return itemRepository.getAllByOwner(userId);
+    public ItemDto getItem(Long itemId) {
+        Optional<Item> searchedItem = itemRepository.get(itemId);
+        if (searchedItem.isPresent()) {
+            Item searchResult = searchedItem.get();
+            return ItemDtoMapper.toDTO(searchResult);
+        } else {
+            throw new NotFoundException("Инструмент с ID - " + itemId + " не найден.");
+        }
     }
 
     @Override
-    public Collection<Item> searchByQuery(String text) {
-        return itemRepository.getByQuery(text);
+    public Collection<ItemDto> getAllOwnerItems(Long userId) {
+        return itemRepository.getAllByOwner(userId)
+                .stream()
+                .map(ItemDtoMapper::toDTO)
+                .toList();
+    }
+
+    @Override
+    public Collection<ItemDto> searchByQuery(String text) {
+        return itemRepository.getByQuery(text)
+                .stream()
+                .map(ItemDtoMapper::toDTO)
+                .toList();
     }
 
     private void validate(Item item) {
@@ -62,13 +79,13 @@ public class ItemServiceImpl implements ItemService {
         if (item.getOwnerId() == null) {
             throw new ValidationException("Поле OwnerId не может быть пустым");
         }
-        if (item.getName() == null || item.getName().isEmpty()) {
+        if (item.getName() == null || item.getName().isBlank()) {
             throw new ValidationException("Поле Name не может быть пустым");
         }
-        if (item.getDescription() == null || item.getDescription().isEmpty()) {
+        if (item.getDescription() == null || item.getDescription().isBlank()) {
             throw new ValidationException("Поле Description не может быть пустым");
         }
-        if (item.getAvailable() == null || item.getAvailable().isEmpty()) {
+        if (item.getAvailable() == null || item.getAvailable().isBlank()) {
             throw new ValidationException("Поле Available не может быть пустым");
         }
     }

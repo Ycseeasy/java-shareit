@@ -8,15 +8,17 @@ import ru.practicum.shareit.user.model.User;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
 public class InMemoryUserRepository implements UserRepository {
 
     private final HashMap<Long, User> userData = new HashMap<>();
-    protected final List<String> emails = new ArrayList<>();
+    protected final Set<String> emails = new HashSet<>();
+    private long counter = 1;
 
     @Override
     public User create(User user) {
@@ -24,7 +26,7 @@ public class InMemoryUserRepository implements UserRepository {
             throw new AlreadyExistsException("Пользователь с почтой " + user.getEmail()
                     + " уже зарегестрирован в системе");
         }
-        user.setId(getNextId());
+        user.setId(counter++);
         userData.put(user.getId(), user);
         emails.add(user.getEmail());
         return user;
@@ -61,14 +63,5 @@ public class InMemoryUserRepository implements UserRepository {
     @Override
     public Collection<User> getAll() {
         return new ArrayList<>(userData.values());
-    }
-
-    private long getNextId() {
-        long currentMaxId = userData.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
     }
 }

@@ -1,6 +1,5 @@
 package ru.practicum.shareit.user;
 
-import jakarta.validation.Valid;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import ru.practicum.shareit.user.model.User;
+import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.service.UserService;
 
 import java.util.Collection;
@@ -28,23 +27,23 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    public User createUser(@RequestBody @Valid User user) {
+    public UserDto createUser(@RequestBody UserDto userDto) {
         log.info("""
                 Создание пользователя
                 Имя {}
-                Почта {}""", user.getName(), user.getEmail());
-        return userService.createUser(user);
+                Почта {}""", userDto.getName(), userDto.getEmail());
+        return userService.createUser(userDto);
     }
 
     @PatchMapping("/{userId}")
     @ResponseStatus(HttpStatus.OK)
-    public User updateUser(@PathVariable @NonNull Long userId, @RequestBody @Valid User user) {
+    public UserDto updateUser(@PathVariable @NonNull Long userId, @RequestBody UserDto userDto) {
         log.info("""
                 Обновление данных пользователя
                 ID {}
                 Имя {}
-                Почта {}""", userId, user.getName(), user.getEmail());
-        return userService.updateUser(userId, user);
+                Почта {}""", userId, userDto.getName(), userDto.getEmail());
+        return userService.updateUser(userId, userDto);
     }
 
     @DeleteMapping("/{userId}")
@@ -59,7 +58,7 @@ public class UserController {
 
     @GetMapping("/{userId}")
     @ResponseStatus(HttpStatus.OK)
-    public User getUser(@PathVariable @NonNull Long userId) {
+    public UserDto getUser(@PathVariable @NonNull Long userId) {
         log.info("""
                 Поиск данных пользователя
                 ID {}
@@ -69,7 +68,7 @@ public class UserController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public Collection<User> getAllUsers() {
+    public Collection<UserDto> getAllUsers() {
         log.info("Отображения списка всех пользователей");
         return userService.getAllUsers();
     }

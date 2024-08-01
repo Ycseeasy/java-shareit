@@ -18,8 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.item.dto.ItemDtoMapper;
-import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.service.ItemService;
 
 import java.util.Collection;
@@ -33,8 +31,8 @@ public class ItemController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    public ItemDto createItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive long userId,
-                              @RequestBody @Valid ItemDto itemDto) {
+    public ItemDto createItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId,
+                              @RequestBody ItemDto itemDto) {
         log.info("""
                 Создание инструмента
                 Название {}
@@ -42,16 +40,14 @@ public class ItemController {
                 Доступность для бронирования {}
                 ID владельца {}
                 """, itemDto.getName(), itemDto.getDescription(), itemDto.getAvailable(), userId);
-        Item item = ItemDtoMapper.fromDTO(userId, itemDto);
-        Item createdItem = itemService.createItem(item);
-        return ItemDtoMapper.toDTO(createdItem);
+        return itemService.createItem(itemDto, userId);
     }
 
     @PatchMapping("/{itemId}")
     @ResponseStatus(HttpStatus.OK)
-    public ItemDto updateItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive long userId,
+    public ItemDto updateItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId,
                               @PathVariable @Positive long itemId,
-                              @RequestBody @Valid ItemDto itemDto) {
+                              @RequestBody ItemDto itemDto) {
         log.info("""
                 Обновление данных о инструменте
                 ID инструмента {}
@@ -60,9 +56,7 @@ public class ItemController {
                 Доступность для бронирования {}
                 ID владельца {}
                 """, itemId, itemDto.getName(), itemDto.getDescription(), itemDto.getAvailable(), userId);
-        Item item = ItemDtoMapper.fromDTO(userId, itemDto);
-        Item updatedItem = itemService.updateItem(itemId, item);
-        return ItemDtoMapper.toDTO(updatedItem);
+        return itemService.updateItem(itemId, itemDto, userId);
     }
 
 
@@ -72,20 +66,16 @@ public class ItemController {
         log.info("""
                 Поиск инструмента с ID {}
                 """, itemId);
-        Item searchResult = itemService.getItem(itemId);
-        return ItemDtoMapper.toDTO(searchResult);
+        return itemService.getItem(itemId);
     }
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public Collection<ItemDto> getAllOwnerItems(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive long userId) {
+    public Collection<ItemDto> getAllOwnerItems(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId) {
         log.info("""
                 Отображение списка инструментов пользователя с ID {}
                 """, userId);
-        Collection<Item> ownerItems = itemService.getAllOwnerItems(userId);
-        return ownerItems.stream()
-                .map(ItemDtoMapper::toDTO)
-                .toList();
+        return itemService.getAllOwnerItems(userId);
     }
 
     @GetMapping("/search")
@@ -94,9 +84,6 @@ public class ItemController {
         log.info("""
                 Поиск инструментов по запросу "{}"
                 """, text);
-        Collection<Item> itemsByQuery = itemService.searchByQuery(text);
-        return itemsByQuery.stream()
-                .map(ItemDtoMapper::toDTO)
-                .toList();
+        return itemService.searchByQuery(text);
     }
 }
