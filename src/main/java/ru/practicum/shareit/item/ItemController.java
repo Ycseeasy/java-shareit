@@ -1,5 +1,6 @@
 package ru.practicum.shareit.item;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.NonNull;
@@ -16,7 +17,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.CommentDtoInput;
+import ru.practicum.shareit.item.dto.CommentDtoOutput;
+import ru.practicum.shareit.item.dto.ItemDtoInput;
+import ru.practicum.shareit.item.dto.ItemDtoOutput;
+import ru.practicum.shareit.item.dto.ItemDtoOutputBooking;
 import ru.practicum.shareit.item.service.ItemService;
 
 import java.util.Collection;
@@ -30,23 +35,23 @@ public class ItemController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    public ItemDto createItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId,
-                              @RequestBody ItemDto itemDto) {
+    public ItemDtoOutput createItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId,
+                                    @RequestBody ItemDtoInput itemDtoInput) {
         log.info("""
                 Создание инструмента
                 Название {}
                 Описание {}
                 Доступность для бронирования {}
                 ID владельца {}
-                """, itemDto.getName(), itemDto.getDescription(), itemDto.getAvailable(), userId);
-        return itemService.createItem(itemDto, userId);
+                """, itemDtoInput.getName(), itemDtoInput.getDescription(), itemDtoInput.getAvailable(), userId);
+        return itemService.createItem(itemDtoInput, userId);
     }
 
     @PatchMapping("/{itemId}")
     @ResponseStatus(HttpStatus.OK)
-    public ItemDto updateItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId,
-                              @PathVariable @Positive long itemId,
-                              @RequestBody ItemDto itemDto) {
+    public ItemDtoOutput updateItem(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId,
+                                    @PathVariable @Positive long itemId,
+                                    @RequestBody ItemDtoInput itemDtoInput) {
         log.info("""
                 Обновление данных о инструменте
                 ID инструмента {}
@@ -54,23 +59,24 @@ public class ItemController {
                 Описание {}
                 Доступность для бронирования {}
                 ID владельца {}
-                """, itemId, itemDto.getName(), itemDto.getDescription(), itemDto.getAvailable(), userId);
-        return itemService.updateItem(itemId, itemDto, userId);
+                """, itemId, itemDtoInput.getName(), itemDtoInput.getDescription(), itemDtoInput.getAvailable(), userId);
+        return itemService.updateItem(itemId, itemDtoInput, userId);
     }
 
 
     @GetMapping("/{itemId}")
     @ResponseStatus(HttpStatus.OK)
-    public ItemDto getItem(@PathVariable @NonNull Long itemId) {
+    public ItemDtoOutputBooking getItem(@RequestHeader("X-Sharer-User-Id") @Positive long userId,
+                                        @PathVariable @NonNull Long itemId) {
         log.info("""
                 Поиск инструмента с ID {}
                 """, itemId);
-        return itemService.getItem(itemId);
+        return itemService.getItem(userId, itemId);
     }
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public Collection<ItemDto> getAllOwnerItems(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId) {
+    public Collection<ItemDtoOutputBooking> getAllOwnerItems(@RequestHeader("X-Sharer-User-Id") @NotNull @Positive Long userId) {
         log.info("""
                 Отображение списка инструментов пользователя с ID {}
                 """, userId);
@@ -79,10 +85,19 @@ public class ItemController {
 
     @GetMapping("/search")
     @ResponseStatus(HttpStatus.OK)
-    public Collection<ItemDto> searchItems(@RequestParam("text") String text) {
+    public Collection<ItemDtoOutput> searchItems(@RequestParam("text") String text) {
         log.info("""
                 Поиск инструментов по запросу "{}"
                 """, text);
         return itemService.searchByQuery(text);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentDtoOutput addComment(@RequestHeader("X-Sharer-User-Id") @Positive long userId,
+                                       @PathVariable @Positive long itemId,
+                                       @RequestBody @Valid CommentDtoInput comment) {
+        log.info("Received request from userId={} to add comment {} to itemId={}", userId, comment, itemId);
+        return itemService.addComment(userId, itemId, comment);
     }
 }
