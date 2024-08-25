@@ -71,7 +71,7 @@ public class ItemController {
         log.info("""
                 Поиск инструмента с ID {}
                 """, itemId);
-        return itemService.getItem(userId, itemId);
+        return itemService.getItem(itemId, userId);
     }
 
     @GetMapping

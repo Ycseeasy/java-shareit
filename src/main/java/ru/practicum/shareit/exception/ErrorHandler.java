@@ -35,12 +35,21 @@ public class ErrorHandler {
         );
     }
 
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ExceptionHandler(InternalServerException.class)
-    public ErrorResponse handleInternalServerException(InternalServerException e) {
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidUserException(final InvalidUserException e) {
         return new ErrorResponse(
-                "InternalServerException",
+                "InvalidUserException",
                 e.getMessage()
+        );
+    }
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse handleThrowable(final Throwable e) {
+        return new ErrorResponse(
+                "Throwable",
+                "Произошла непредвиденная ошибка."
         );
     }
 }

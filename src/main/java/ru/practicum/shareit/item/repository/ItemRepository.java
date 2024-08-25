@@ -8,8 +8,7 @@ import java.util.Collection;
 
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
-    @Query("SELECT i FROM Item AS i WHERE i.owner.id=:userId")
-    Collection<Item> getAllItems(long userId);
+    Collection<Item> findByOwnerId(long userId);
 
     @Query("SELECT i FROM Item AS i " +
             "WHERE i.available = TRUE " +

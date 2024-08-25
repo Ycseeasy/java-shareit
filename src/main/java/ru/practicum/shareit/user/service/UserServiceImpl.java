@@ -7,7 +7,7 @@ import ru.practicum.shareit.exception.AlreadyExistsException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.user.dto.UserDto;
-import ru.practicum.shareit.user.dto.UserDtoMapper;
+import ru.practicum.shareit.user.dto.UserMapper;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
@@ -22,16 +22,17 @@ import static java.util.Objects.nonNull;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     @Override
     public UserDto createUser(UserDto userDto) {
         if (userRepository.hasEmail(userDto.getEmail())) {
             throw new AlreadyExistsException("Почта " + userDto.getEmail() + " уже зарегестрирована в системе");
         }
-        User user = UserDtoMapper.fromDTO(userDto);
+        User user = userMapper.fromDTO(userDto);
         validate(user);
         User createdUser = userRepository.save(user);
-        return UserDtoMapper.toDTO(createdUser);
+        return userMapper.toDTO(createdUser);
     }
 
     @Override
@@ -42,11 +43,11 @@ public class UserServiceImpl implements UserService {
         }
         User oldUser = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь с id - " + userId + "Не найден в системе"));
-        User newUser = UserDtoMapper.fromDTO(userDto);
+        User newUser = userMapper.fromDTO(userDto);
         newUser.setId(userId);
         User updatedUser = updateFields(oldUser, newUser);
         validate(updatedUser);
-        return UserDtoMapper.toDTO(userRepository.save(updatedUser));
+        return userMapper.toDTO(userRepository.save(updatedUser));
 
     }
 
@@ -73,7 +74,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto getUser(Long userId) {
         Optional<User> user = userRepository.findById(userId);
-        return user.map(UserDtoMapper::toDTO).orElseThrow(
+        return user.map(userMapper::toDTO).orElseThrow(
                 () -> new NotFoundException("Пользователь с ID " + userId + " не найден."));
     }
 
@@ -81,7 +82,7 @@ public class UserServiceImpl implements UserService {
     public Collection<UserDto> getAllUsers() {
         Collection<User> users = userRepository.findAll();
         return users.stream()
-                .map(UserDtoMapper::toDTO)
+                .map(userMapper::toDTO)
                 .toList();
     }
 

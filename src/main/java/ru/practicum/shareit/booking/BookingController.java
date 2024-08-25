@@ -38,30 +38,29 @@ public class BookingController {
 
     @PatchMapping("/{bookingId}")
     public BookingDtoOutput answerBookingRequest(@RequestHeader("X-Sharer-User-Id") @Positive long userId,
-                                           @PathVariable("bookingId") @Positive long bookingId,
-                                           @RequestParam(name = "approved") boolean isApproved) {
+                                                 @PathVariable("bookingId") @Positive long bookingId,
+                                                 @RequestParam(name = "approved") boolean isApproved) {
         return bookingService.answerBookingRequest(userId, bookingId, isApproved);
     }
 
     @GetMapping("/{bookingId}")
     public BookingDtoOutput getBookingStatus(@RequestHeader("X-Sharer-User-Id") @Positive long userId,
-                                       @PathVariable("bookingId") @Positive long bookingId) {
+                                             @PathVariable("bookingId") @Positive long bookingId) {
         return bookingService.getBookingStatus(userId, bookingId);
     }
 
     @GetMapping
     public List<BookingDtoOutput> getAllBookingsByUser(@RequestHeader("X-Sharer-User-Id") @Positive long userId,
-                                                 @RequestParam(name = "state",
-                                                         required = false,
-                                                         defaultValue = "ALL") BookingState state) {
+                                                       @RequestParam(name = "state",
+                                                               defaultValue = "ALL") BookingState state) {
         return bookingService.getAllBookingsOfUser(userId, state);
     }
 
     @GetMapping("/owner")
     public List<BookingDtoOutput> getAllBookingsForUserItems(@RequestHeader("X-Sharer-User-Id") @Positive long userId,
-                                                       @RequestParam(name = "state",
-                                                               required = false,
-                                                               defaultValue = "ALL") @NotNull BookingState state) {
+                                                             @RequestParam(name = "state",
+                                                                     required = false,
+                                                                     defaultValue = "ALL") @NotNull BookingState state) {
         return bookingService.getAllBookingsForUserItems(userId, state);
     }
 

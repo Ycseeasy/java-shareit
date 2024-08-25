@@ -31,11 +31,11 @@ public class Comment {
     @Column(name = "text", nullable = false)
     String text;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "itemId")
     Item item;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "authorId")
     User author;
 

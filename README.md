@@ -1,6 +1,6 @@
-## java-filmorate
-Template repository for Filmorate project.
-## ER-диаграмма
+## java-shareit
+Template repository for Shareit project.
+## ER-diagram
 ```mermaid
 erDiagram
     bookings {
@@ -8,7 +8,7 @@ erDiagram
         timestamp start
         timestamp end
         bigint itemId FK
-        bigint itemId FK
+        bigint ownerId FK
         text status
     }
     

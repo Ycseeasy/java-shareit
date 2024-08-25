@@ -13,7 +13,7 @@ public interface ItemService {
 
     ItemDtoOutput updateItem(Long itemId, ItemDtoInput itemDtoInput, Long userId);
 
-    ItemDtoOutputBooking getItem(Long userid, Long itemId);
+    ItemDtoOutputBooking getItem(Long itemId, Long userId);
 
     Collection<ItemDtoOutputBooking> getAllOwnerItems(Long userId);
 

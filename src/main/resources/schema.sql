@@ -42,7 +42,3 @@ CREATE TABLE IF NOT EXISTS comments (
   CONSTRAINT FKCommentsItem_id FOREIGN KEY (item_id) REFERENCES items (id),
   CONSTRAINT FKCommentsAuthor_id FOREIGN KEY (author_id) REFERENCES users (id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_users_id_email ON users(id,email);
-CREATE INDEX IF NOT EXISTS idx_items_owner_id ON items(owner_id);
-CREATE INDEX IF NOT EXISTS idx_items_id_owner_id ON items(id,owner_id);
