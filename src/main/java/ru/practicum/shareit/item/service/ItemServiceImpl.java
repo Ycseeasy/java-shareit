@@ -131,13 +131,12 @@ public class ItemServiceImpl implements ItemService {
                         .filter(booking -> booking.getStart().isAfter(LocalDateTime.now()))
                         .findFirst();
 
-                bookingsI.sort(Comparator.comparing(Booking::getEnd));
-
                 Optional<Booking> lastBooking = bookingsI
                         .stream()
+                        .sorted(Comparator.comparing(Booking::getEnd))
                         .filter(booking -> booking.getEnd().isBefore(LocalDateTime.now()))
                         .findFirst();
-                log.info("lastBooking {}", lastBooking);
+
                 result.add(itemDTOMapper.toDTOBookings(i, commentsI,
                         lastBooking.orElse(null), nextBooking.orElse(null)));
             }
