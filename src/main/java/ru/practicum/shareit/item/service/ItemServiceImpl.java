@@ -1,6 +1,7 @@
 package ru.practicum.shareit.item.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
@@ -18,11 +19,13 @@ import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
@@ -97,44 +100,48 @@ public class ItemServiceImpl implements ItemService {
             throw new NotFoundException("Пользователь с ID " + userId + " не найден.");
         }
         Collection<ItemDtoOutputBooking> result = new ArrayList<>();
+
         Collection<Item> items = itemRepository.findByOwnerId(userId);
-        List<Long> itemsId = new ArrayList<>();
+        Collection<Long> itemsId = items
+                .stream()
+                .map(Item::getId)
+                .toList();
+
+        Map<Item, List<Booking>> bookingsMap = bookingRepository.findByItemIdInAndStatusNotOrderByStartAsc(itemsId,
+                        BookingStatus.REJECTED)
+                .stream()
+                .collect(Collectors.groupingBy(Booking::getItem));
+
+        Map<Item, List<Comment>> commentMap = commentRepository.findByItemIdIn(itemsId)
+                .stream()
+                .collect(Collectors.groupingBy(Comment::getItem));
+
         for (Item i : items) {
-            itemsId.add(i.getId());
-        }
-        List<Booking> bookings = bookingRepository.findByItemIdInAndStatusNotOrderByStartAsc(itemsId,
-                BookingStatus.REJECTED);
-        Collection<Comment> allComments = commentRepository.findByItemIdIn(itemsId);
-        for (Item i : items) {
-            List<Booking> bookingsI = new ArrayList<>(bookings
-                    .stream()
-                    .filter(booking -> booking.getItem().getId() == i.getId())
-                    .toList());
+            List<CommentDtoOutput> commentsI = List.of();
+            if (!commentMap.isEmpty()) {
+                commentsI = commentMap.get(i)
+                        .stream()
+                        .map(commentMapperOut::toDTO)
+                        .toList();
+            }
+            if (!bookingsMap.isEmpty()) {
+                List<Booking> bookingsI = bookingsMap.get(i);
+                Optional<Booking> nextBooking = bookingsI
+                        .stream()
+                        .filter(booking -> booking.getStart().isAfter(LocalDateTime.now()))
+                        .findFirst();
 
-            Optional<Booking> nextBooking = bookingsI
-                    .stream()
-                    .filter(booking -> booking.getStart().isAfter(LocalDateTime.now()))
-                    .findFirst();
+                bookingsI.sort(Comparator.comparing(Booking::getEnd));
 
-            bookingsI.sort((booking1, booking2) -> {
-                LocalDateTime end1 = booking1.getEnd();
-                LocalDateTime end2 = booking2.getEnd();
-                return end2.compareTo(end1);
-            });
-
-            Optional<Booking> lastBooking = bookingsI
-                    .stream()
-                    .filter(booking -> booking.getEnd().isBefore(LocalDateTime.now()))
-                    .findFirst();
-
-            List<CommentDtoOutput> commentsI = allComments
-                    .stream()
-                    .filter(comment -> comment.getItem().getId() == i.getId())
-                    .map(commentMapperOut::toDTO)
-                    .toList();
-
-            result.add(itemDTOMapper.toDTOBookings(i, commentsI,
-                    lastBooking.orElse(null), nextBooking.orElse(null)));
+                Optional<Booking> lastBooking = bookingsI
+                        .stream()
+                        .filter(booking -> booking.getEnd().isBefore(LocalDateTime.now()))
+                        .findFirst();
+                log.info("lastBooking {}", lastBooking);
+                result.add(itemDTOMapper.toDTOBookings(i, commentsI,
+                        lastBooking.orElse(null), nextBooking.orElse(null)));
+            }
+            result.add(itemDTOMapper.toDTOBookings(i, commentsI, null, null));
         }
         return result;
     }
