@@ -1,19 +1,17 @@
 package ru.practicum.shareit.user.repository;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import ru.practicum.shareit.user.model.User;
 
-import java.util.Collection;
-import java.util.Optional;
 
-public interface UserRepository {
+public interface UserRepository extends JpaRepository<User, Long> {
 
-    User create(User user);
+    @Query("SELECT CASE WHEN COUNT(u)>0 THEN TRUE ELSE FALSE END " +
+            "FROM User AS u WHERE u.id!=:userId AND u.email=:email")
+    boolean hasEmail(long userId, String email);
 
-    User update(User oldUser, User newUser);
-
-    Optional<User> get(Long userId);
-
-    Optional<User> delete(long userId);
-
-    Collection<User> getAll();
+    @Query("SELECT CASE WHEN COUNT(u)> 0 THEN TRUE ELSE FALSE END " +
+            "FROM User AS u WHERE u.email=:email")
+    boolean hasEmail(String email);
 }
