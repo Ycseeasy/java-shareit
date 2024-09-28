@@ -3,7 +3,6 @@ package ru.practicum.shareit.item.mapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.model.Booking;
-import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.item.dto.comment.CommentDTO;
 import ru.practicum.shareit.item.dto.item.ItemCreateDTO;
 import ru.practicum.shareit.item.dto.item.ItemDTO;
@@ -11,18 +10,14 @@ import ru.practicum.shareit.item.dto.item.ItemDTOForRequest;
 import ru.practicum.shareit.item.dto.item.ItemDTOWithBookings;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.model.User;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor

@@ -2,11 +2,8 @@ package ru.practicum.shareit.request.mapper;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import ru.practicum.shareit.item.dto.comment.CommentDTO;
 import ru.practicum.shareit.item.dto.item.ItemDTOForRequest;
-import ru.practicum.shareit.item.mapper.CommentDTOMapper;
 import ru.practicum.shareit.item.mapper.ItemDTOMapper;
-import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.request.dto.ItemRequestCreateDTO;
