@@ -19,15 +19,12 @@ import ru.practicum.shareit.item.dto.item.ItemCreateDTO;
 import ru.practicum.shareit.item.service.ItemServiceImpl;
 import ru.practicum.shareit.request.dto.ItemRequestCreateDTO;
 import ru.practicum.shareit.request.dto.ItemRequestDTO;
-import ru.practicum.shareit.request.dto.ItemRequestDTOWithAnswers;
-import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.request.service.ItemRequestServiceImpl;
 import ru.practicum.shareit.user.dto.UserCreateDTO;
 
 import ru.practicum.shareit.user.service.UserServiceImpl;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
