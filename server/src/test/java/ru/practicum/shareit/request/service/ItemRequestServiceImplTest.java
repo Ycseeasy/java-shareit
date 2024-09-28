@@ -36,7 +36,6 @@ class ItemRequestServiceImplTest {
 
 
     @Test
-    @DisplayName("create correct item")
     void createItemRequest() {
         String description = "some description";
         UserCreateDTO userCreateDTO = new UserCreateDTO("Anna", "anna@mail.ru");
