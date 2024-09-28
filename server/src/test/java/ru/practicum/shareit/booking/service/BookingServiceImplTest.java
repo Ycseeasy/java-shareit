@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @SpringBootTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ExtendWith(MockitoExtension.class)
-class ItemRequestServiceImplTest {
+class BookingServiceImplTest {
 
     private final ItemRequestServiceImpl itemRequestService;
     private final UserServiceImpl userService;
