@@ -14,16 +14,14 @@ import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.model.User;
 
 import java.time.LocalDateTime;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Transactional
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @SpringBootTest
-class RequestDTOMapperTest {
-    private final BookingDTOMapper bookingDTOMapper;
+class BookingMapperTest {
 
+    private final BookingDTOMapper bookingDTOMapper;
 
     @Test
     void fromCreateDTO() {
