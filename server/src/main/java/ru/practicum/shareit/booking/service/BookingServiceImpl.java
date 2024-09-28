@@ -13,12 +13,15 @@ import ru.practicum.shareit.booking.model.BookingState;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.exception.IdNotFoundException;
 import ru.practicum.shareit.exception.InternalServerException;
+import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 import ru.practicum.shareit.utils.Validator;
 
+import java.util.Collection;
 import java.util.List;
 
 import static ru.practicum.shareit.booking.model.BookingStatus.APPROVED;
@@ -32,6 +35,7 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final BookingRepository bookingRepository;
+    private final CommentRepository commentRepository;
     private final Validator validator;
     private final BookingDTOMapper bookingDTOMapper;
 
@@ -50,7 +54,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(WAITING);
         Booking createdBooking = bookingRepository.save(booking);
         log.info("{} was created", createdBooking);
-        return bookingDTOMapper.toDTO(createdBooking);
+        Collection<Comment> itemComments = commentRepository.getCommentsByItem(item.getId());
+        return BookingDTOMapper.toDTO(createdBooking, itemComments);
     }
 
     @Transactional
@@ -66,7 +71,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(isApproved ? APPROVED : REJECTED);
         Booking savedBooking = bookingRepository.save(booking);
         log.info("User saved answer {} for {} ", isApproved, savedBooking);
-        return bookingDTOMapper.toDTO(savedBooking);
+        Collection<Comment> itemComments = commentRepository.getCommentsByItem(savedBooking.getItem().getId());
+        return BookingDTOMapper.toDTO(savedBooking, itemComments);
     }
 
     @Override
@@ -79,7 +85,8 @@ public class BookingServiceImpl implements BookingService {
             throw new IdNotFoundException(
                     String.format("User with id=%d is not owner or booker for booking with id=%d", userId, bookingId));
         }
-        return bookingDTOMapper.toDTO(booking);
+        Collection<Comment> itemComments = commentRepository.getCommentsByItem(booking.getItem().getId());
+        return BookingDTOMapper.toDTO(booking, itemComments);
     }
 
     @Override
@@ -95,8 +102,12 @@ public class BookingServiceImpl implements BookingService {
             case WAITING -> bookingRepository.getWaitingBookingsOfUser(userId);
         };
         return bookings.stream()
-                .map(bookingDTOMapper::toDTO)
+                .map((Booking booking) -> {
+                    Collection<Comment> itemComments = commentRepository.getCommentsByItem(booking.getItem().getId());
+                    return BookingDTOMapper.toDTO(booking, itemComments);
+                })
                 .toList();
+
     }
 
     @Override
@@ -112,7 +123,10 @@ public class BookingServiceImpl implements BookingService {
             case WAITING -> bookingRepository.getWaitingBookingsForUserItems(userId);
         };
         return bookings.stream()
-                .map(bookingDTOMapper::toDTO)
+                .map((Booking booking) -> {
+                    Collection<Comment> itemComments = commentRepository.getCommentsByItem(booking.getItem().getId());
+                    return BookingDTOMapper.toDTO(booking, itemComments);
+                })
                 .toList();
     }
 }

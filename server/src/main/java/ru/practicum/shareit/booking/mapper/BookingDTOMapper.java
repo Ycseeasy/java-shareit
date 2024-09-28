@@ -7,10 +7,13 @@ import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.item.dto.item.ItemDTO;
 import ru.practicum.shareit.item.mapper.ItemDTOMapper;
+import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.dto.UserDTO;
 import ru.practicum.shareit.user.mapper.UserDTOMapper;
 import ru.practicum.shareit.user.model.User;
+
+import java.util.Collection;
 
 @Component
 @RequiredArgsConstructor
@@ -26,8 +29,8 @@ public class BookingDTOMapper {
                 .build();
     }
 
-    public BookingDto toDTO(Booking booking) {
-        ItemDTO itemDTO = itemDTOMapper.toDTO(booking.getItem());
+    public static BookingDto toDTO(Booking booking, Collection<Comment> comments) {
+        ItemDTO itemDTO = ItemDTOMapper.toDTO(booking.getItem(), comments);
         UserDTO userDTO = UserDTOMapper.toDTO(booking.getBooker());
         return BookingDto.builder()
                 .id(booking.getId())

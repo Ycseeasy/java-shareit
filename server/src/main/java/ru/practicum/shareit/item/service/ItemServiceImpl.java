@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.booking.model.Booking;
+import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.exception.IdNotFoundException;
 import ru.practicum.shareit.item.dto.comment.CommentCreateDTO;
 import ru.practicum.shareit.item.dto.comment.CommentDTO;
@@ -24,9 +26,9 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 import ru.practicum.shareit.utils.Validator;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -39,8 +41,8 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final ItemRequestRepository requestRepository;
+    private final BookingRepository bookingRepository;
     private final Validator validator;
-    private final ItemDTOMapper itemDTOMapper;
 
     @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -54,10 +56,11 @@ public class ItemServiceImpl implements ItemService {
                     .orElseThrow(() -> new IdNotFoundException(
                             String.format("Item request with id=%d does not exists", requestId)));
         }
-        Item itemToCreate = itemDTOMapper.fromCreateDTO(user, itemCreateDTO, request);
+        Item itemToCreate = ItemDTOMapper.fromCreateDTO(user, itemCreateDTO, request);
         Item createdItem = itemRepository.save(itemToCreate);
         log.info("Item {} was created", createdItem);
-        return itemDTOMapper.toDTO(createdItem);
+        Collection<Comment> comments = commentRepository.getCommentsByItem(createdItem.getId());
+        return ItemDTOMapper.toDTO(createdItem, comments);
     }
 
     @Override
@@ -70,7 +73,8 @@ public class ItemServiceImpl implements ItemService {
         Item itemToUpdate = fillInFieldsToUpdate(oldItem, itemUpdateDTO);
         Item updatedItem = itemRepository.save(itemToUpdate);
         log.info("{} was updated", updatedItem);
-        return itemDTOMapper.toDTO(itemToUpdate);
+        Collection<Comment> comments = commentRepository.getCommentsByItem(updatedItem.getId());
+        return ItemDTOMapper.toDTO(itemToUpdate, comments);
     }
 
     private Item fillInFieldsToUpdate(Item item, ItemUpdateDTO itemUpdateDTO) {
@@ -93,7 +97,10 @@ public class ItemServiceImpl implements ItemService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ItemDTOWithBookings getItem(long userId, long itemId) {
         Optional<Item> item = itemRepository.findById(itemId);
-        return item.map(i -> itemDTOMapper.toDTOWithBookings(userId, i)).orElseThrow(
+        Booking lastBooking = bookingRepository.getLastBookingForItemOwnedByUser(userId, itemId).orElse(null);
+        Booking nextBooking = bookingRepository.getNextBookingForItemOwnedByUser(userId, itemId).orElse(null);
+        Collection<Comment> comments = commentRepository.getCommentsByItem(itemId);
+        return item.map(i -> ItemDTOMapper.toDTOWithBookings(userId, i, comments, lastBooking, nextBooking)).orElseThrow(
                 () -> new IdNotFoundException("Item with id=" + itemId + " not found"));
     }
 
@@ -102,7 +109,14 @@ public class ItemServiceImpl implements ItemService {
     public Collection<ItemDTOWithBookings> getAllItems(long userId) {
         validator.validateIfUserNotExists(userId);
         Collection<Item> items = itemRepository.getAllItems(userId);
-        return itemDTOMapper.toDTOWithBookings(userId, items);
+        Collection<Long> itemIds = items
+                .stream()
+                .map(Item::getId)
+                .toList();
+        Map<Long, Booking> lastBookingMap =  getLastBookingMap(userId, itemIds);
+        Map<Long, Booking> nextBookingMap =  getNextBookingMap(userId, itemIds);
+        Map<Long, List<Comment>> mapComments = getCommentsMapByItemIds(items);
+        return ItemDTOMapper.toDTOWithBookings(userId, items, mapComments, lastBookingMap, nextBookingMap);
     }
 
     @Override
@@ -112,7 +126,7 @@ public class ItemServiceImpl implements ItemService {
             return Collections.emptyList();
         }
         Collection<Item> items = itemRepository.searchItems(text);
-        return itemDTOMapper.toDTO(items);
+        return ItemDTOMapper.toDTO(items, getCommentsMapByItemIds(items));
     }
 
     @Override
@@ -127,5 +141,33 @@ public class ItemServiceImpl implements ItemService {
         Comment newComment = commentRepository.save(comment);
         log.info("{} was added", newComment);
         return CommentDTOMapper.toDTO(newComment);
+    }
+
+    private Map<Long, List<Comment>> getCommentsMapByItemIds(Collection<Item> items) {
+        Collection<Long> itemIds = items.stream()
+                .map(Item::getId)
+                .toList();
+        Collection<Comment> allComments = commentRepository.getCommentsByItemIds(itemIds);
+        Map<Long, List<Comment>> map = new HashMap<>();
+        for (Comment comment : allComments) {
+            Long itemId = comment.getItem().getId();
+            if (!map.containsKey(itemId)) {
+                map.put(itemId, new ArrayList<>());
+            }
+            map.get(itemId).add(comment);
+        }
+        return map;
+    }
+
+    private Map<Long, Booking> getLastBookingMap(long userId, Collection<Long> itemIds) {
+        Collection<Booking> allBookings = bookingRepository.getAllLastBookings(userId, itemIds);
+        return allBookings.stream()
+                .collect(Collectors.toMap(b -> b.getItem().getId(), Function.identity()));
+    }
+
+    private Map<Long, Booking> getNextBookingMap(long userId, Collection<Long> itemIds) {
+        Collection<Booking> allBookings = bookingRepository.getAllNextBooking(userId, itemIds);
+        return allBookings.stream()
+                .collect(Collectors.toMap(b -> b.getItem().getId(), Function.identity()));
     }
 }

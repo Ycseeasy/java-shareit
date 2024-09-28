@@ -6,6 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.IdNotFoundException;
+import ru.practicum.shareit.item.dto.item.ItemDTOForRequest;
+import ru.practicum.shareit.item.mapper.ItemDTOMapper;
+import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.request.dto.ItemRequestCreateDTO;
 import ru.practicum.shareit.request.dto.ItemRequestDTO;
 import ru.practicum.shareit.request.dto.ItemRequestDTOWithAnswers;
@@ -16,7 +20,10 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 import ru.practicum.shareit.utils.Validator;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -24,7 +31,7 @@ import java.util.List;
 public class ItemRequestServiceImpl implements ItemRequestService {
     private final UserRepository userRepository;
     private final ItemRequestRepository requestRepository;
-    private final RequestDTOMapper requestDTOMapper;
+    private final ItemRepository itemRepository;
     private final Validator validator;
 
     @Override
@@ -43,7 +50,8 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     public List<ItemRequestDTOWithAnswers> getUserRequests(long userId) {
         validator.validateIfUserNotExists(userId);
         List<ItemRequest> requests = requestRepository.findAllByRequestor(userId);
-        return requestDTOMapper.toDTOWithAnswers(requests);
+
+        return RequestDTOMapper.toDTOWithAnswers(requests, getItemMapByRequestId(requests));
     }
 
     @Override
@@ -62,6 +70,20 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         ItemRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new IdNotFoundException(
                         (String.format("Item request with id=%d is not available", requestId))));
-        return requestDTOMapper.toDTOWithAnswers(request);
+        return RequestDTOMapper.toDTOWithAnswers(request, itemRepository.findByRequestId(requestId));
+    }
+
+    private Map<Long, List<Item>> getItemMapByRequestId(List<ItemRequest> itemRequests) {
+        List<Long> requestIds = itemRequests.stream().map(ItemRequest::getId).toList();
+        List<Item> items = itemRepository.findByRequestId(requestIds);
+        Map<Long, List<Item>> map = new HashMap<>();
+        for (Item item : items) {
+            long requestId = item.getRequest().getId();
+            if (!map.containsKey(requestId)) {
+                map.put(requestId, new ArrayList<>());
+            }
+            map.get(requestId).add(item);
+        }
+        return map;
     }
 }

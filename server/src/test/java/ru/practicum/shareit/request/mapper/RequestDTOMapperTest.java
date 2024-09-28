@@ -5,12 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.request.dto.ItemRequestCreateDTO;
 import ru.practicum.shareit.request.dto.ItemRequestDTO;
 import ru.practicum.shareit.request.dto.ItemRequestDTOWithAnswers;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.model.User;
 
+import java.util.Collection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,8 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @SpringBootTest
 class RequestDTOMapperTest {
-    private final RequestDTOMapper requestDTOMapper;
-
 
     @Test
     void fromCreateDTO() {
@@ -49,7 +49,7 @@ class RequestDTOMapperTest {
         ItemRequestCreateDTO createDTO2 = new ItemRequestCreateDTO("dddssss");
         ItemRequest request2 = RequestDTOMapper.fromCreateDTO(user2, createDTO2);
         List<ItemRequest> requests = List.of(request1, request2);
-        List<ItemRequestDTOWithAnswers> answeres = requestDTOMapper.toDTOWithAnswers(requests);
+        List<ItemRequestDTOWithAnswers> answeres = RequestDTOMapper.toDTOWithAnswers(requests, null);
         assertEquals(2, answeres.size());
     }
 
@@ -59,7 +59,7 @@ class RequestDTOMapperTest {
         String description = "ssss";
         ItemRequestCreateDTO createDTO = new ItemRequestCreateDTO(description);
         ItemRequest request1 = RequestDTOMapper.fromCreateDTO(user, createDTO);
-        ItemRequestDTOWithAnswers answer = requestDTOMapper.toDTOWithAnswers(request1);
+        ItemRequestDTOWithAnswers answer = RequestDTOMapper.toDTOWithAnswers(request1, null);
         assertEquals(description, answer.getDescription());
     }
 }

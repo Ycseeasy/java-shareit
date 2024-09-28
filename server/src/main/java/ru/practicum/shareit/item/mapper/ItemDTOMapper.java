@@ -27,10 +27,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class ItemDTOMapper {
-    private final CommentRepository commentRepository;
-    private final BookingRepository bookingRepository;
-
-    public Item fromCreateDTO(User user, ItemCreateDTO itemCreateDTO, ItemRequest request) {
+    public static Item fromCreateDTO(User user, ItemCreateDTO itemCreateDTO, ItemRequest request) {
         return Item.builder()
                 .name(itemCreateDTO.getName())
                 .description(itemCreateDTO.getDescription())
@@ -40,7 +37,7 @@ public class ItemDTOMapper {
                 .build();
     }
 
-    private ItemDTO toSemiFinishedDTO(Item item) {
+    private static ItemDTO toSemiFinishedDTO(Item item) {
         return ItemDTO.builder()
                 .id(item.getId())
                 .name(item.getName())
@@ -49,42 +46,27 @@ public class ItemDTOMapper {
                 .build();
     }
 
-    public ItemDTO toDTO(Item item) {
+    public static ItemDTO toDTO(Item item, Collection<Comment> comments) {
         ItemDTO itemDTO = toSemiFinishedDTO(item);
-        List<CommentDTO> commentsDTO = commentRepository
-                .getCommentsByItem(item.getId())
-                .stream()
-                .map(CommentDTOMapper::toDTO)
-                .toList();
-        itemDTO.setComments(commentsDTO);
+        if (comments != null) {
+            List<CommentDTO> commentsDTO = comments
+                    .stream()
+                    .map(CommentDTOMapper::toDTO)
+                    .toList();
+            itemDTO.setComments(commentsDTO);
+        }
         return itemDTO;
     }
 
-    public Collection<ItemDTO> toDTO(Collection<Item> items) {
-        Map<Long, List<CommentDTO>> commentMap = getCommentsMapByItemIds(items);
+    public static Collection<ItemDTO> toDTO(Collection<Item> items, Map<Long, List<Comment>> commentMap) {
+        Map<Long, List<CommentDTO>> commentMapDto = commentMapConvert(commentMap);
         return items.stream()
-                .map(this::toSemiFinishedDTO)
-                .peek(itemDTO -> itemDTO.setComments(commentMap.get(itemDTO.getId())))
+                .map(ItemDTOMapper::toSemiFinishedDTO)
+                .peek(itemDTO -> itemDTO.setComments(commentMapDto.get(itemDTO.getId())))
                 .toList();
     }
 
-    private Map<Long, List<CommentDTO>> getCommentsMapByItemIds(Collection<Item> items) {
-        Collection<Long> itemIds = items.stream()
-                .map(Item::getId)
-                .toList();
-        Collection<Comment> allComments = commentRepository.getCommentsByItemIds(itemIds);
-        Map<Long, List<CommentDTO>> map = new HashMap<>();
-        for (Comment comment : allComments) {
-            Long itemId = comment.getItem().getId();
-            if (!map.containsKey(itemId)) {
-                map.put(itemId, new ArrayList<>());
-            }
-            map.get(itemId).add(CommentDTOMapper.toDTO(comment));
-        }
-        return map;
-    }
-
-    private ItemDTOWithBookings toSemiFinishedDTOWithBookings(Item item) {
+    private static ItemDTOWithBookings toSemiFinishedDTOWithBookings(Item item) {
         return ItemDTOWithBookings.builder()
                 .id(item.getId())
                 .name(item.getName())
@@ -93,31 +75,34 @@ public class ItemDTOMapper {
                 .build();
     }
 
-    public ItemDTOWithBookings toDTOWithBookings(long userId, Item item) {
+    public static ItemDTOWithBookings toDTOWithBookings(long userId, Item item, Collection<Comment> comments,
+                                                        Booking lastBooking, Booking nextBooking) {
         ItemDTOWithBookings itemDTO = toSemiFinishedDTOWithBookings(item);
-        List<CommentDTO> commentsDTO = commentRepository
-                .getCommentsByItem(item.getId())
+        List<CommentDTO> commentsDTO = comments
                 .stream()
                 .map(CommentDTOMapper::toDTO)
                 .toList();
         itemDTO.setComments(commentsDTO);
-        var lastBooking = bookingRepository.getLastBookingForItemOwnedByUser(userId, item.getId());
-        itemDTO.setLastBooking(lastBooking.map(Booking::getEnd).orElse(null));
-        var nextBooking = bookingRepository.getNextBookingForItemOwnedByUser(userId, item.getId());
-        itemDTO.setNextBooking(nextBooking.map(Booking::getStart).orElse(null));
+        if (lastBooking != null) {
+            itemDTO.setLastBooking(lastBooking.getEnd());
+        }
+        if (nextBooking != null) {
+            itemDTO.setNextBooking(nextBooking.getStart());
+        }
         return itemDTO;
     }
 
-    public Collection<ItemDTOWithBookings> toDTOWithBookings(long userId, Collection<Item> items) {
-        Map<Long, List<CommentDTO>> commentMap = getCommentsMapByItemIds(items);
+    public static Collection<ItemDTOWithBookings> toDTOWithBookings(long userId, Collection<Item> items,
+                                                                    Map<Long, List<Comment>> commentMap,
+                                                                    Map<Long, Booking> lastBookingMap,
+                                                                    Map<Long, Booking> nextBookingMap) {
+        Map<Long, List<CommentDTO>> commentMapDto = commentMapConvert(commentMap);
         List<Long> itemIds = items.stream()
                 .map(Item::getId)
                 .toList();
-        Map<Long, Booking> lastBookingMap = getLastBookingMap(userId, itemIds);
-        Map<Long, Booking> nextBookingMap = getNextBookingMap(userId, itemIds);
         return items.stream()
-                .map(this::toSemiFinishedDTOWithBookings)
-                .peek(dto -> dto.setComments(commentMap.get(dto.getId())))
+                .map(ItemDTOMapper::toSemiFinishedDTOWithBookings)
+                .peek(dto -> dto.setComments(commentMapDto.get(dto.getId())))
                 .peek(dto -> {
                     Booking booking = lastBookingMap.get(dto.getId());
                     LocalDateTime date = (booking == null) ? null : booking.getEnd();
@@ -131,17 +116,6 @@ public class ItemDTOMapper {
                 .toList();
     }
 
-    private Map<Long, Booking> getLastBookingMap(long userId, Collection<Long> itemIds) {
-        Collection<Booking> allBookings = bookingRepository.getAllLastBookings(userId, itemIds);
-        return allBookings.stream()
-                .collect(Collectors.toMap(b -> b.getItem().getId(), Function.identity()));
-    }
-
-    private Map<Long, Booking> getNextBookingMap(long userId, Collection<Long> itemIds) {
-        Collection<Booking> allBookings = bookingRepository.getAllNextBooking(userId, itemIds);
-        return allBookings.stream()
-                .collect(Collectors.toMap(b -> b.getItem().getId(), Function.identity()));
-    }
 
     public static ItemDTOForRequest toDTOForRequest(Item item) {
         return ItemDTOForRequest.builder()
@@ -149,6 +123,18 @@ public class ItemDTOMapper {
                 .name(item.getName())
                 .ownerId(item.getOwner().getId())
                 .build();
+    }
+
+    private static Map<Long, List<CommentDTO>> commentMapConvert(Map<Long, List<Comment>> commentMap) {
+        Map<Long, List<CommentDTO>> commentMapDto = new HashMap<>();
+        for (Map.Entry<Long, List<Comment>> entry : commentMap.entrySet()) {
+            List<CommentDTO> commentDTO = entry.getValue()
+                    .stream()
+                    .map(CommentDTOMapper::toDTO)
+                    .toList();
+            commentMapDto.put(entry.getKey(), commentDTO);
+        }
+        return commentMapDto;
     }
 
 }
