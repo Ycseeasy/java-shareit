@@ -80,17 +80,20 @@ class BaseClientTest {
 
     @Test
     public void getTestErrorTest() {
-        assertThrows(Throwable.class, () -> baseClient.get(null, null, null));
+        assertThrows(Throwable.class, () -> baseClient.get(null,
+                null, null));
     }
 
     @Test
     public void postTestErrorTest() {
-        assertThrows(Throwable.class, () -> baseClient.post(null, null, null, null));
+        assertThrows(Throwable.class, () -> baseClient.post(null,
+                null, null, null));
     }
 
     @Test
     public void patchTestErrorTest() {
-        assertThrows(Throwable.class, () -> baseClient.patch(null, null, null, null));
+        assertThrows(Throwable.class, () -> baseClient.patch(null,
+                null, null, null));
     }
 
     @Test
