@@ -2,17 +2,12 @@ package ru.practicum.shareit.item.client;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.mockito.Spy;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
-import ru.practicum.shareit.booking.client.BookingClient;
 import ru.practicum.shareit.item.dto.comment.CommentCreateDTO;
 import ru.practicum.shareit.item.dto.item.ItemCreateDTO;
 import ru.practicum.shareit.item.dto.item.ItemUpdateDTO;
