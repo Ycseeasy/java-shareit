@@ -1,5 +1,6 @@
 package ru.practicum.shareit.request.client;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import ru.practicum.shareit.request.dto.ItemRequestCreateDTO;
 public class ItemRequestClient extends BaseClient {
     private static final String API_PREFIX = "/requests";
 
+    @Autowired
     public ItemRequestClient(@Value("${shareit-server.url}") String serverUrl,
                              RestTemplateBuilder restTemplateBuilder) {
         super(restTemplateBuilder
