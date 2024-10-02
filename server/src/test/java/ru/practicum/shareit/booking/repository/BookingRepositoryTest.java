@@ -29,6 +29,7 @@ public class BookingRepositoryTest {
     void findByBookerIdAndStartAfterOrderByStartAscTest() {
 
     }
+
     @Test
     void findByBookerIdAndStatusOrderByStartAscTest() {
 
