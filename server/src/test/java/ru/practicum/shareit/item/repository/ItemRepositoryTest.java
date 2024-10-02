@@ -102,8 +102,8 @@ public class ItemRepositoryTest {
     @AfterEach
     void clear() {
         requestRepository.deleteAll();
-        userRepository.deleteAll();
         itemRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
 }
