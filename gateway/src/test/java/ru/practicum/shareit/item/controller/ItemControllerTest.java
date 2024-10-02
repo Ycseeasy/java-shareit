@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.item.client.ItemClient;
@@ -13,14 +14,18 @@ import ru.practicum.shareit.item.dto.comment.CommentCreateDTO;
 import ru.practicum.shareit.item.dto.item.ItemCreateDTO;
 import ru.practicum.shareit.item.dto.item.ItemUpdateDTO;
 
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.hamcrest.Matchers.is;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 @WebMvcTest(controllers = ItemController.class)
 class ItemControllerTest {
@@ -31,122 +36,127 @@ class ItemControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper mapper;
 
-    private final String userIdHeader = "X-Sharer-User-Id";
+    final String userIdHeader = "X-Sharer-User-Id";
+    final long userId = 112L;
+    final long itemId = 23123L;
+    final ItemCreateDTO item = new ItemCreateDTO("nam", "descripti", true, 1L);
 
     @Test
     void createItem() throws Exception {
-        long userId = 112L;
-        long id = 10L;
-        String name = "name";
-        String description = "description";
-        boolean available = true;
-        ItemCreateDTO itemCreateDTO = new ItemCreateDTO(name, description, available, 10L);
-        String json = objectMapper.writeValueAsString(itemCreateDTO);
-
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.CREATED);
-        when(itemClient.createItem(userId, itemCreateDTO)).thenReturn(response);
+        ResponseEntity<Object> response = new ResponseEntity<>(item, HttpStatus.CREATED);
+        when(itemClient.createItem(userId, item))
+                .thenReturn(response);
 
         mockMvc.perform(post("/items")
-                        .contentType("application/json")
-                        .content(json)
-                        .header(userIdHeader, userId))
-                .andExpect(status().isCreated());
-        verify(itemClient, times(1)).createItem(userId, itemCreateDTO);
+                        .header(userIdHeader, userId)
+                        .content(mapper.writeValueAsString(item))
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name", is(item.getName())))
+                .andExpect(jsonPath("$.description", is(item.getDescription())))
+                .andExpect(jsonPath("$.available", is(item.getAvailable()), Boolean.class))
+                .andExpect(jsonPath("$.requestId", is(item.getRequestId()), Long.class));
+        verify(itemClient, times(1)).createItem(userId, item);
         verifyNoMoreInteractions(itemClient);
     }
 
     @Test
     void updateItem() throws Exception {
-        long userId = 100;
-        long itemId = 212;
-        String name = "ssss";
-        String description = "sssaqdewds";
-        boolean available = true;
-        ItemUpdateDTO itemUpdateDTO = new ItemUpdateDTO(name, description, available);
-        String json = objectMapper.writeValueAsString(itemUpdateDTO);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(itemClient.updateItem(userId, itemId, itemUpdateDTO)).thenReturn(response);
+        ItemUpdateDTO updateItem = new ItemUpdateDTO("upd", "upd", true);
+        ResponseEntity<Object> response = new ResponseEntity<>(updateItem, HttpStatus.OK);
+        when(itemClient.updateItem(userId, itemId, updateItem))
+                .thenReturn(response);
 
         mockMvc.perform(patch("/items/" + itemId)
-                        .contentType("application/json")
-                        .content(json)
-                        .header(userIdHeader, userId))
-                .andExpect(status().isOk());
-        verify(itemClient, times(1)).updateItem(userId, itemId, itemUpdateDTO);
+                        .header(userIdHeader, userId)
+                        .content(mapper.writeValueAsString(updateItem))
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is(updateItem.getName())))
+                .andExpect(jsonPath("$.description", is(updateItem.getDescription())))
+                .andExpect(jsonPath("$.available", is(updateItem.getAvailable()), Boolean.class));
+        verify(itemClient, times(1)).updateItem(userId, itemId, updateItem);
         verifyNoMoreInteractions(itemClient);
     }
 
     @Test
     void getItem() throws Exception {
-        long userId = 100;
-        long itemId = 212;
-        String name = "ssss";
-        String description = "sssaqdewds";
-        boolean available = true;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(itemClient.getItem(userId, itemId)).thenReturn(response);
+        ResponseEntity<Object> response = new ResponseEntity<>(item, HttpStatus.OK);
+        when(itemClient.getItem(userId, itemId))
+                .thenReturn(response);
 
         mockMvc.perform(get("/items/" + itemId)
-                        .contentType("application/json")
                         .header(userIdHeader, userId))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is(item.getName())))
+                .andExpect(jsonPath("$.description", is(item.getDescription())))
+                .andExpect(jsonPath("$.available", is(item.getAvailable()), Boolean.class))
+                .andExpect(jsonPath("$.requestId", is(item.getRequestId()), Long.class));
         verify(itemClient, times(1)).getItem(userId, itemId);
         verifyNoMoreInteractions(itemClient);
     }
 
     @Test
     void getAllItems() throws Exception {
-        long userId = 100;
-        long itemId = 212;
-        String name = "ssss";
-        String description = "sssaqdewds";
-        boolean available = true;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(itemClient.getAllItems(userId)).thenReturn(response);
+        List<ItemCreateDTO> itemList = new ArrayList<>();
+        ItemCreateDTO item2 = new ItemCreateDTO("name2", "description2", true, 2L);
+        itemList.add(item2);
+        itemList.add(item);
+        ResponseEntity<Object> response = new ResponseEntity<>(itemList, HttpStatus.OK);
+        when(itemClient.getAllItems(userId))
+                .thenReturn(response);
 
         mockMvc.perform(get("/items")
-                        .contentType("application/json")
                         .header(userIdHeader, userId))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name", is(item2.getName())))
+                .andExpect(jsonPath("$[0].description", is(item2.getDescription())))
+                .andExpect(jsonPath("$[0].available", is(item2.getAvailable()), Boolean.class))
+                .andExpect(jsonPath("$[0].requestId", is(item2.getRequestId()), Long.class));
         verify(itemClient, times(1)).getAllItems(userId);
         verifyNoMoreInteractions(itemClient);
     }
 
     @Test
     void searchItems() throws Exception {
-        long userId = 21321;
-        long itemId = 212;
-        String name = "ssss";
-        String description = "sssaqdewds";
-        boolean available = true;
-        String text = "sssss";
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(itemClient.searchItems(text)).thenReturn(response);
+        List<ItemCreateDTO> itemList = new ArrayList<>();
+        ItemCreateDTO item2 = new ItemCreateDTO("name2", "description2", true, 2L);
+        itemList.add(item2);
+        itemList.add(item);
+        ResponseEntity<Object> response = new ResponseEntity<>(itemList, HttpStatus.OK);
+        when(itemClient.searchItems("sssss")).thenReturn(response);
 
         mockMvc.perform(get("/items/search?text=sssss")
                         .header(userIdHeader, userId))
-                .andExpect(status().isOk());
-        verify(itemClient, times(1)).searchItems(text);
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name", is(item2.getName())))
+                .andExpect(jsonPath("$[0].description", is(item2.getDescription())))
+                .andExpect(jsonPath("$[0].available", is(item2.getAvailable()), Boolean.class))
+                .andExpect(jsonPath("$[0].requestId", is(item2.getRequestId()), Long.class));
+        verify(itemClient, times(1)).searchItems("sssss");
         verifyNoMoreInteractions(itemClient);
     }
 
     @Test
     void addComment() throws Exception {
-        long userId = 21321;
-        long itemId = 212;
-        String text = "saxsdxa";
-        CommentCreateDTO comment = new CommentCreateDTO(text);
-        String json = objectMapper.writeValueAsString(comment);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.CREATED);
-
+        CommentCreateDTO comment = new CommentCreateDTO("saxsdxa");
+        ResponseEntity<Object> response = new ResponseEntity<>(comment, HttpStatus.CREATED);
         when(itemClient.addComment(userId, itemId, comment)).thenReturn(response);
+
         mockMvc.perform(post("/items/" + itemId + "/comment")
-                        .contentType("application/json")
-                        .content(json)
-                        .header(userIdHeader, userId))
-                .andExpect(status().isCreated());
+                        .header(userIdHeader, userId)
+                        .content(mapper.writeValueAsString(comment))
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.text", is(comment.getText())));
         verify(itemClient, times(1)).addComment(userId, itemId, comment);
         verifyNoMoreInteractions(itemClient);
     }

@@ -1,53 +1,106 @@
 package ru.practicum.shareit.request.client;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Spy;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 import ru.practicum.shareit.request.dto.ItemRequestCreateDTO;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class ItemRequestClientTest {
 
-    @Spy
-    private ItemRequestClient itemRequestClient =
-            new ItemRequestClient("http://localhost:9090", new RestTemplateBuilder());
+    private final ItemRequestCreateDTO request = new ItemRequestCreateDTO("sss");
+    long userId = 1L;
+    long requestId = 1L;
+    RestTemplate rest;
+    ItemRequestClient client;
+
+    @BeforeEach
+    void setUp() {
+        rest = Mockito.mock(RestTemplate.class);
+        client = new ItemRequestClient(rest);
+    }
 
     @Test
     void createItemRequest() {
-        String path = "";
-        long userId = 1231L;
-        String description = "bla-bla";
-        ItemRequestCreateDTO itemRequestCreateDTO = new ItemRequestCreateDTO();
-        assertThrows(Throwable.class, () -> itemRequestClient.createItemRequest(userId, itemRequestCreateDTO));
-        assertThrows(Throwable.class, () -> itemRequestClient.post(path, userId, null, itemRequestCreateDTO));
+        ResponseEntity<Object> response = new ResponseEntity<>(request, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.createItemRequest(userId, request));
     }
 
     @Test
     void getUserRequests() {
-        long userId = 1231L;
-        String path = "";
-        assertThrows(Throwable.class, () -> itemRequestClient.getUserRequests(userId));
-        assertThrows(Throwable.class, () -> itemRequestClient.get(path, userId, null));
+        ResponseEntity<Object> response = new ResponseEntity<>(request, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getUserRequests(userId));
     }
 
     @Test
     void getAllRequestsExceptUser() {
-        long userId = 1231L;
-        String path = "/all";
-        assertThrows(Throwable.class, () -> itemRequestClient.getAllRequestsExceptUser(userId));
-        assertThrows(Throwable.class, () -> itemRequestClient.get(path, userId, null));
+        ResponseEntity<Object> response = new ResponseEntity<>(request, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getAllRequestsExceptUser(userId));
     }
 
     @Test
     void getRequestById() {
-        long userId = 1231L;
-        long requestId = 1231L;
-        String path = String.format("/%d", requestId);
-        assertThrows(Throwable.class, () -> itemRequestClient.getAllRequestsExceptUser(requestId));
-        assertThrows(Throwable.class, () -> itemRequestClient.get(path, userId, null));
+        ResponseEntity<Object> response = new ResponseEntity<>(request, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getRequestById(userId, requestId));
+    }
+
+    @Test
+    public void createItemRequestErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.createItemRequest(userId,
+                null));
+    }
+
+    @Test
+    public void getUserRequestsErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.getUserRequests(userId));
+    }
+
+    @Test
+    public void getAllRequestsExceptUserErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.getAllRequestsExceptUser(userId));
+    }
+
+    @Test
+    public void getRequestByIdErrorTest() {
+        Long userId = null;
+        Long requestId = null;
+        assertThrows(Throwable.class, () -> client.getRequestById(userId,
+                requestId));
     }
 }

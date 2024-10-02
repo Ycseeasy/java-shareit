@@ -5,6 +5,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import ru.practicum.shareit.baseclient.BaseClient;
 import ru.practicum.shareit.booking.dto.BookingCreateDto;
@@ -23,6 +24,10 @@ public class BookingClient extends BaseClient {
                 .requestFactory(() -> new HttpComponentsClientHttpRequestFactory())
                 .build()
         );
+    }
+
+    public BookingClient(RestTemplate rest) {
+        super(rest);
     }
 
     public ResponseEntity<Object> createBooking(long userId, BookingCreateDto booking) {

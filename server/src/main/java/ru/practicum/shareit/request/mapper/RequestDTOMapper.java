@@ -77,7 +77,7 @@ public class RequestDTOMapper {
 
     private Map<Long, List<Item>> getItemMapByRequestId(List<ItemRequest> itemRequests) {
         List<Long> requestIds = itemRequests.stream().map(ItemRequest::getId).toList();
-        List<Item> items = itemRepository.findByRequestId(requestIds);
+        List<Item> items = itemRepository.findByRequestIdIn(requestIds);
         Map<Long, List<Item>> map = new HashMap<>();
         for (Item item : items) {
             long requestId = item.getRequest().getId();

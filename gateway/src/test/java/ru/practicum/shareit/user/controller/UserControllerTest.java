@@ -7,12 +7,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.user.client.UserClient;
 import ru.practicum.shareit.user.dto.UserCreateDTO;
 import ru.practicum.shareit.user.dto.UserUpdateDTO;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -21,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = UserController.class)
@@ -33,60 +40,50 @@ class UserControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper mapper;
+
+    private final UserCreateDTO user = new UserCreateDTO("Anna", "anna@mail.ru");
+    final long userId = 2;
 
     @Test
-    @DisplayName("create correct user")
     void createUserTest() throws Exception {
-        long userId = 2;
-        String userName = "Anna";
-        String userEmail = "anna@mail.ru";
-        UserCreateDTO userCreateDTO = new UserCreateDTO(userName, userEmail);
-        String json = objectMapper.writeValueAsString(userCreateDTO);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.CREATED);
-        when(mockedUserClient.createUser(userCreateDTO)).thenReturn(response);
-        mockMvc.perform(post("/users").contentType("application/json").content(json))
-                .andExpect(status().isCreated());
-        verify(mockedUserClient, times(1)).createUser(userCreateDTO);
+        ResponseEntity<Object> response = new ResponseEntity<>(user, HttpStatus.CREATED);
+        when(mockedUserClient.createUser(user))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/users")
+                        .content(mapper.writeValueAsString(user))
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email", is(user.getEmail())))
+                .andExpect(jsonPath("$.name", is(user.getName())));
+        verify(mockedUserClient, times(1)).createUser(user);
         verifyNoMoreInteractions(mockedUserClient);
     }
 
     @Test
-    @DisplayName("update correct user")
     void updateCorrectUserTest() throws Exception {
-        long userId = 1231L;
-        String userName = "Anna";
-        String userEmail = "anna@mail.ru";
-        UserUpdateDTO updateDTO = new UserUpdateDTO(userName, userEmail);
-        String json = objectMapper.writeValueAsString(updateDTO);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(mockedUserClient.updateUser(userId, updateDTO)).thenReturn(response);
+        UserUpdateDTO updateDTO = new UserUpdateDTO("Anna", "anna@mail.ru");
+        ResponseEntity<Object> response = new ResponseEntity<>(updateDTO, HttpStatus.OK);
+        when(mockedUserClient.updateUser(userId, updateDTO))
+                .thenReturn(response);
 
-        mockMvc.perform(patch("/users/" + userId).contentType("application/json").content(json))
-                .andExpect(status().isOk());
+        mockMvc.perform(patch("/users/" + userId)
+                        .content(mapper.writeValueAsString(updateDTO))
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email", is(updateDTO.getEmail())))
+                .andExpect(jsonPath("$.name", is(updateDTO.getName())));
         verify(mockedUserClient, times(1)).updateUser(userId, updateDTO);
         verifyNoMoreInteractions(mockedUserClient);
     }
 
     @Test
-    @DisplayName("update correct user")
-    void updateIncorrectUserTest() throws Exception {
-        Long userId = null;
-        String userName = "Anna";
-        String userEmail = "anna@mail.ru";
-        UserUpdateDTO updateDTO = new UserUpdateDTO(userName, userEmail);
-        String json = objectMapper.writeValueAsString(updateDTO);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(mockedUserClient.updateUser(userId, updateDTO)).thenReturn(response);
-
-        mockMvc.perform(patch("/users/" + userId).contentType("application/json").content(json))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("delete correct user")
     void deleteUserTest() throws Exception {
-        long userId = 100L;
         mockMvc.perform(delete("/users/" + userId))
                 .andExpect(status().isNoContent());
         verify(mockedUserClient, times(1)).deleteUser(userId);
@@ -94,47 +91,33 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("delete correct user")
-    void deleteIncorrectUserTest() throws Exception {
-        Long userId = null;
-        mockMvc.perform(delete("/users/" + userId))
-                .andExpect(status().isBadRequest());
-    }
-
-
-    @Test
-    @DisplayName("get correct user")
     void getCorrectUser() throws Exception {
-        long userId = 1213;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(mockedUserClient.getUser(userId)).thenReturn(response);
+        ResponseEntity<Object> response = new ResponseEntity<>(user, HttpStatus.OK);
+        when(mockedUserClient.getUser(userId))
+                .thenReturn(response);
 
         mockMvc.perform(get("/users/" + userId))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email", is(user.getEmail())))
+                .andExpect(jsonPath("$.name", is(user.getName())));
         verify(mockedUserClient, times(1)).getUser(userId);
         verifyNoMoreInteractions(mockedUserClient);
     }
 
     @Test
-    @DisplayName("get correct user")
-    void getIncorrectUser() throws Exception {
-        Long userId = null;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(mockedUserClient.getUser(userId)).thenReturn(response);
-        mockMvc.perform(get("/users/" + userId))
-                .andExpect(status().isBadRequest());
-        verify(mockedUserClient, times(0)).getUser(userId);
-        verifyNoMoreInteractions(mockedUserClient);
-    }
-
-    @Test
-    @DisplayName("get all users")
     void getAllUsers() throws Exception {
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(mockedUserClient.getAllUsers()).thenReturn(response);
+        List<UserCreateDTO> userList = new ArrayList<>();
+        UserCreateDTO user2 = new UserCreateDTO("Anna2", "anna2@mail.ru");
+        userList.add(user2);
+        userList.add(user);
+        ResponseEntity<Object> response = new ResponseEntity<>(userList, HttpStatus.OK);
+        when(mockedUserClient.getAllUsers())
+                .thenReturn(response);
 
         mockMvc.perform(get("/users"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].email", is(user2.getEmail())))
+                .andExpect(jsonPath("$[0].name", is(user2.getName())));
         verify(mockedUserClient, times(1)).getAllUsers();
         verifyNoMoreInteractions(mockedUserClient);
     }

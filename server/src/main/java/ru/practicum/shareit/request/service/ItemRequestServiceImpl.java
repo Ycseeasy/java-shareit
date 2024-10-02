@@ -16,12 +16,10 @@ import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.request.repository.ItemRequestRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
-import ru.practicum.shareit.utils.Validator;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -30,7 +28,6 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     private final UserRepository userRepository;
     private final ItemRequestRepository requestRepository;
     private final ItemRepository itemRepository;
-    private final Validator validator;
 
     @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -46,8 +43,8 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ, readOnly = true)
     public List<ItemRequestDTOWithAnswers> getUserRequests(long userId) {
-        validator.validateIfUserNotExists(userId);
-        List<ItemRequest> requests = requestRepository.findAllByRequestor(userId);
+        validateIfUserNotExists(userId);
+        List<ItemRequest> requests = requestRepository.findByRequestorIdOrderByCreatedAsc(userId);
 
         return RequestDTOMapper.toDTOWithAnswers(requests, getItemMapByRequestId(requests));
     }
@@ -55,8 +52,8 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ, readOnly = true)
     public List<ItemRequestDTO> getAllRequestsExceptUser(long userId) {
-        validator.validateIfUserNotExists(userId);
-        List<ItemRequest> requests = requestRepository.findAllExceptRequestor(userId);
+        validateIfUserNotExists(userId);
+        List<ItemRequest> requests = requestRepository.findByRequestorIdNotOrderByCreatedAsc(userId);
         return requests.stream()
                 .map(RequestDTOMapper::toDTO)
                 .toList();
@@ -72,16 +69,21 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     }
 
     private Map<Long, List<Item>> getItemMapByRequestId(List<ItemRequest> itemRequests) {
-        List<Long> requestIds = itemRequests.stream().map(ItemRequest::getId).toList();
-        List<Item> items = itemRepository.findByRequestId(requestIds);
-        Map<Long, List<Item>> map = new HashMap<>();
-        for (Item item : items) {
-            long requestId = item.getRequest().getId();
-            if (!map.containsKey(requestId)) {
-                map.put(requestId, new ArrayList<>());
-            }
-            map.get(requestId).add(item);
+        List<Long> requestIds = itemRequests
+                .stream()
+                .map(ItemRequest::getId)
+                .toList();
+        List<Item> items = itemRepository.findByRequestIdIn(requestIds);
+        return items
+                .stream()
+                .collect(Collectors.groupingBy(item -> {
+                    return item.getRequest().getId();
+                }));
+    }
+
+    public void validateIfUserNotExists(long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new IdNotFoundException(String.format("User with id=%d does not exists", userId));
         }
-        return map;
     }
 }

@@ -7,17 +7,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.practicum.shareit.booking.dto.BookingCreateDto;
 import ru.practicum.shareit.request.client.ItemRequestClient;
 import ru.practicum.shareit.request.dto.ItemRequestCreateDTO;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ItemRequestController.class)
@@ -29,66 +38,79 @@ class ItemRequestControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper mapper;
 
     private final String userIdHeader = "X-Sharer-User-Id";
+    private final ItemRequestCreateDTO request = new ItemRequestCreateDTO("description");
+    final long userId = 1L;
+    final long requestId = 1000L;
+
 
     @Test
-    @DisplayName("create request for item")
     void createRequest() throws Exception {
-        long userId = 1231L;
-        String description = "bla-bla";
-        ItemRequestCreateDTO itemRequestCreateDTO = new ItemRequestCreateDTO();
-        itemRequestCreateDTO.setDescription(description);
-        String json = objectMapper.writeValueAsString(itemRequestCreateDTO);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.CREATED);
+        ResponseEntity<Object> response = new ResponseEntity<>(request, HttpStatus.CREATED);
 
-        when(mockItemRequestClient.createItemRequest(userId, itemRequestCreateDTO)).thenReturn(response);
+        when(mockItemRequestClient.createItemRequest(userId, request))
+                .thenReturn(response);
 
         mockMvc.perform(post("/requests")
-                        .contentType("application/json")
-                        .content(json)
-                        .header(userIdHeader, userId))
-                .andExpect(status().isCreated());
-        verify(mockItemRequestClient, times(1)).createItemRequest(userId, itemRequestCreateDTO);
+                        .header(userIdHeader, userId)
+                        .content(mapper.writeValueAsString(request))
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.description", is(request.getDescription())));
+        verify(mockItemRequestClient, times(1)).createItemRequest(userId, request);
         verifyNoMoreInteractions(mockItemRequestClient);
     }
 
     @Test
-    @DisplayName("get requests from user")
     void getUserRequests() throws Exception {
-        long userId = 1000L;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(mockItemRequestClient.getUserRequests(userId)).thenReturn(response);
+        List<ItemRequestCreateDTO> requestList = new ArrayList<>();
+        ItemRequestCreateDTO request2 = new ItemRequestCreateDTO("description2");
+        requestList.add(request2);
+        requestList.add(request);
 
-        mockMvc.perform(get("/requests").header(userIdHeader, userId))
-                .andExpect(status().isOk());
+        ResponseEntity<Object> response = new ResponseEntity<>(requestList, HttpStatus.OK);
+        when(mockItemRequestClient.getUserRequests(userId))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/requests")
+                        .header(userIdHeader, userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].description", is(request2.getDescription())));
         verify(mockItemRequestClient, times(1)).getUserRequests(userId);
         verifyNoMoreInteractions(mockItemRequestClient);
     }
 
     @Test
-    @DisplayName("get all requests")
     void getAllRequestsExceptUser() throws Exception {
-        long userId = 1000L;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
+        List<ItemRequestCreateDTO> requestList = new ArrayList<>();
+        ItemRequestCreateDTO request2 = new ItemRequestCreateDTO("description2");
+        requestList.add(request2);
+        requestList.add(request);
+
+        ResponseEntity<Object> response = new ResponseEntity<>(requestList, HttpStatus.OK);
         when(mockItemRequestClient.getAllRequestsExceptUser(userId)).thenReturn(response);
 
-        mockMvc.perform(get("/requests/all").header(userIdHeader, userId))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/requests/all")
+                        .header(userIdHeader, userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].description", is(request2.getDescription())));
         verify(mockItemRequestClient, times(1)).getAllRequestsExceptUser(userId);
         verifyNoMoreInteractions(mockItemRequestClient);
     }
 
     @Test
     void getRequestById() throws Exception {
-        long userId = 1000L;
-        long requestId = 1000L;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
+        ResponseEntity<Object> response = new ResponseEntity<>(request, HttpStatus.OK);
         when(mockItemRequestClient.getRequestById(userId, requestId)).thenReturn(response);
 
-        mockMvc.perform(get("/requests/" + requestId).header(userIdHeader, userId))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/requests/" + requestId)
+                        .header(userIdHeader, userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description", is(request.getDescription())));
         verify(mockItemRequestClient, times(1)).getRequestById(userId, requestId);
         verifyNoMoreInteractions(mockItemRequestClient);
     }

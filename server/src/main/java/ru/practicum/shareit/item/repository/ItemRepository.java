@@ -9,12 +9,7 @@ import java.util.List;
 
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
-    @Query("""
-            SELECT i
-            FROM Item AS i
-            WHERE i.owner.id=:userId
-            """)
-    Collection<Item> getAllItems(long userId);
+    Collection<Item> findByOwnerId(long userId);
 
     @Query("""
             SELECT i
@@ -32,18 +27,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             """)
     boolean existsByIdAndOwner(long itemId, long userId);
 
-    @Query("""
-            SELECT i
-            FROM Item AS i
-            WHERE i.request.id = :requestId
-            """)
     List<Item> findByRequestId(long requestId);
 
-    @Query("""
-            SELECT i
-            FROM Item AS i
-            WHERE i.request.id IN :requestIds
-            """)
-    List<Item> findByRequestId(Collection<Long> requestIds);
+    List<Item> findByRequestIdIn(Collection<Long> requestIds);
 
 }

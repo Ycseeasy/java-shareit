@@ -1,75 +1,134 @@
 package ru.practicum.shareit.booking.client;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.mockito.ArgumentMatchers;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import ru.practicum.shareit.booking.dto.BookingCreateDto;
+import org.mockito.Mockito;
 import ru.practicum.shareit.booking.dto.BookingState;
 
-import java.util.Map;
+import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
-class BookingClientTest {
 
-    @Mock
-    RestTemplate restTemplate;
+public class BookingClientTest {
 
-    private final BookingClient bookingClient =
-            new BookingClient("http://localhost:9090", new RestTemplateBuilder());
+    private final BookingCreateDto bookingCreateDto = new BookingCreateDto(
+            1L,
+            LocalDateTime.of(2024, 12, 1, 12, 12, 12),
+            LocalDateTime.of(2025, 12, 1, 12, 12, 12)
+    );
+    long userId = 1L;
+    RestTemplate rest;
+    BookingClient client;
+
+    @BeforeEach
+    void setUp() {
+        rest = Mockito.mock(RestTemplate.class);
+        client = new BookingClient(rest);
+    }
 
     @Test
     void createBooking() {
-        long userId = 22;
-        long itemId = 12312;
-        BookingCreateDto bookingCreateDto = new BookingCreateDto(itemId, null, null);
-        String path = "";
-        assertThrows(Throwable.class, () -> bookingClient.createBooking(userId, bookingCreateDto));
-        assertThrows(Throwable.class, () -> bookingClient.post(path, userId, null, bookingCreateDto));
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.createBooking(userId, bookingCreateDto));
     }
 
     @Test
     void answerBookingRequest() {
-        long userId = 22;
-        long bookingId = 12312;
-        boolean isApproved = true;
-        String path = String.format("/%d", bookingId);
-        Map<String, String> query = Map.of("approved", Boolean.TRUE.toString());
-        assertThrows(Throwable.class, () -> bookingClient.answerBookingRequest(userId, bookingId, isApproved));
-        assertThrows(Throwable.class, () -> bookingClient.patch(path, userId, query, null));
-
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.answerBookingRequest(userId, 1, true));
     }
 
     @Test
     void getBookingStatus() {
-        long userId = 22;
-        long bookingId = 12312;
-        String path = String.format("/%d", bookingId);
-        assertThrows(Throwable.class, () -> bookingClient.getBookingStatus(userId, bookingId));
-        assertThrows(Throwable.class, () -> bookingClient.get(path, userId, null));
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getBookingStatus(userId, 1));
     }
 
     @Test
     void getAllBookingsOfUser() {
-        long userId = 22;
-        BookingState state = BookingState.ALL;
-        String path = "";
-        Map<String, String> query = Map.of("state", state.name());
-        assertThrows(Throwable.class, () -> bookingClient.getAllBookingsOfUser(userId, state));
-        assertThrows(Throwable.class, () -> bookingClient.get(path, userId, query));
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getAllBookingsOfUser(userId, BookingState.ALL));
     }
 
     @Test
     void getAllBookingsForUserItems() {
-        String path = "/owner";
-        long userId = 22;
-        BookingState state = BookingState.ALL;
-        Map<String, String> query = Map.of("state", state.name());
-        assertThrows(Throwable.class, () -> bookingClient.getAllBookingsForUserItems(userId, state));
-        assertThrows(Throwable.class, () -> bookingClient.get(path, userId, query));
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getAllBookingsOfUser(userId, BookingState.ALL));
+    }
+
+    @Test
+    public void createBookingErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.createBooking(userId,
+                null));
+    }
+
+    @Test
+    public void answerBookingRequestErrorTest() {
+        Long userId = null;
+        Boolean isApproved = null;
+        Long bookingId = null;
+        assertThrows(Throwable.class, () -> client.answerBookingRequest(userId,
+                bookingId, isApproved));
+    }
+
+    @Test
+    public void getBookingStatusErrorTest() {
+        Long userId = null;
+        Long bookingId = null;
+        assertThrows(Throwable.class, () -> client.getBookingStatus(userId,
+                bookingId));
+    }
+
+    @Test
+    public void getAllBookingsOfUserErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.getAllBookingsOfUser(userId, null));
+    }
+
+    @Test
+    public void getAllBookingsForUserItemsErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.getAllBookingsForUserItems(userId, null));
     }
 }

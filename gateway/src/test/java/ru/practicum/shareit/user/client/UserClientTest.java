@@ -1,65 +1,98 @@
 package ru.practicum.shareit.user.client;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Spy;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 import ru.practicum.shareit.user.dto.UserCreateDTO;
 import ru.practicum.shareit.user.dto.UserUpdateDTO;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
+
 class UserClientTest {
 
-    @Spy
-    private UserClient userClient = new UserClient("http://localhost:9090", new RestTemplateBuilder());
+    private final UserCreateDTO user = new UserCreateDTO("name", "email@email");
+    private final UserUpdateDTO userUpd = new UserUpdateDTO("name", "email@email");
+    long userId = 1L;
+    RestTemplate rest;
+    UserClient client;
+
+    @BeforeEach
+    void setUp() {
+        rest = Mockito.mock(RestTemplate.class);
+        client = new UserClient(rest);
+    }
 
     @Test
     void createUser() {
-        String path = "";
-        String userName = "Anna";
-        String userEmail = "anna@mail.ru";
-        UserCreateDTO userCreateDTO = new UserCreateDTO(userName, userEmail);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.CREATED);
-        assertThrows(Throwable.class, () -> userClient.createUser(userCreateDTO));
-        assertThrows(Throwable.class, () -> userClient.post(path, null, null, userCreateDTO));
+        ResponseEntity<Object> response = new ResponseEntity<>(user, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.createUser(user));
     }
 
     @Test
     void updateUser() {
-        long userId = 1231L;
-        String userName = "Anna";
-        String userEmail = "anna@mail.ru";
-        String path = String.format("/%d", userId);
-        UserUpdateDTO updateDTO = new UserUpdateDTO(userName, userEmail);
-        assertThrows(Throwable.class, () -> userClient.updateUser(userId, updateDTO));
-        assertThrows(Throwable.class, () -> userClient.post(path, null, null, updateDTO));
-    }
-
-    @Test
-    void deleteUser() {
-        long userId = 1231L;
-        String path = String.format("/%d", userId);
-        assertThrows(Throwable.class, () -> userClient.deleteUser(userId));
-        assertThrows(Throwable.class, () -> userClient.delete(path));
+        ResponseEntity<Object> response = new ResponseEntity<>(userUpd, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.updateUser(userId, userUpd));
     }
 
     @Test
     void getUser() {
-        long userId = 1231L;
-        String path = String.format("/%d", userId);
-        assertThrows(Throwable.class, () -> userClient.getUser(userId));
-        assertThrows(Throwable.class, () -> userClient.get(path, null, null));
+        ResponseEntity<Object> response = new ResponseEntity<>(user, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getUser(userId));
     }
 
     @Test
     void getAllUsers() {
-        String path = "";
-        assertThrows(Throwable.class, () -> userClient.getAllUsers());
-        assertThrows(Throwable.class, () -> userClient.get(path, null, null));
+        ResponseEntity<Object> response = new ResponseEntity<>(user, HttpStatus.CREATED);
+        when(rest.exchange(
+                anyString(),
+                ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.<Class<Object>>any()))
+                .thenReturn(response);
+        assertEquals(response, client.getAllUsers());
+    }
+
+    @Test
+    public void createUserErrorTest() {
+        assertThrows(Throwable.class, () -> client.createUser(null));
+    }
+
+    @Test
+    public void updateUserErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.updateUser(userId, null));
+    }
+
+    @Test
+    public void getUserErrorTest() {
+        Long userId = null;
+        assertThrows(Throwable.class, () -> client.getUser(userId));
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.exception.IdNotFoundException;
+import ru.practicum.shareit.exception.InternalServerException;
 import ru.practicum.shareit.item.dto.comment.CommentCreateDTO;
 import ru.practicum.shareit.item.dto.comment.CommentDTO;
 import ru.practicum.shareit.item.dto.item.ItemCreateDTO;
@@ -24,7 +25,6 @@ import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.request.repository.ItemRequestRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
-import ru.practicum.shareit.utils.Validator;
 
 import java.util.*;
 import java.util.function.Function;
@@ -42,7 +42,6 @@ public class ItemServiceImpl implements ItemService {
     private final CommentRepository commentRepository;
     private final ItemRequestRepository requestRepository;
     private final BookingRepository bookingRepository;
-    private final Validator validator;
 
     @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -59,7 +58,7 @@ public class ItemServiceImpl implements ItemService {
         Item itemToCreate = ItemDTOMapper.fromCreateDTO(user, itemCreateDTO, request);
         Item createdItem = itemRepository.save(itemToCreate);
         log.info("Item {} was created", createdItem);
-        Collection<Comment> comments = commentRepository.getCommentsByItem(createdItem.getId());
+        Collection<Comment> comments = commentRepository.findByItemId(createdItem.getId());
         return ItemDTOMapper.toDTO(createdItem, comments);
     }
 
@@ -68,12 +67,12 @@ public class ItemServiceImpl implements ItemService {
     public ItemDTO updateItem(long userId, long itemId, ItemUpdateDTO itemUpdateDTO) {
         Item oldItem = itemRepository.findById(itemId)
                 .orElseThrow(() -> new IdNotFoundException(String.format("Item with id=%d does not exists", itemId)));
-        validator.validateIfUserOwnsItem(userId, itemId);
+        validateIfUserOwnsItem(userId, itemId);
 
         Item itemToUpdate = fillInFieldsToUpdate(oldItem, itemUpdateDTO);
         Item updatedItem = itemRepository.save(itemToUpdate);
         log.info("{} was updated", updatedItem);
-        Collection<Comment> comments = commentRepository.getCommentsByItem(updatedItem.getId());
+        Collection<Comment> comments = commentRepository.findByItemId(updatedItem.getId());
         return ItemDTOMapper.toDTO(itemToUpdate, comments);
     }
 
@@ -99,7 +98,7 @@ public class ItemServiceImpl implements ItemService {
         Optional<Item> item = itemRepository.findById(itemId);
         Booking lastBooking = bookingRepository.getLastBookingForItemOwnedByUser(userId, itemId).orElse(null);
         Booking nextBooking = bookingRepository.getNextBookingForItemOwnedByUser(userId, itemId).orElse(null);
-        Collection<Comment> comments = commentRepository.getCommentsByItem(itemId);
+        Collection<Comment> comments = commentRepository.findByItemId(itemId);
         return item.map(i -> ItemDTOMapper.toDTOWithBookings(userId, i, comments, lastBooking, nextBooking)).orElseThrow(
                 () -> new IdNotFoundException("Item with id=" + itemId + " not found"));
     }
@@ -107,8 +106,8 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Collection<ItemDTOWithBookings> getAllItems(long userId) {
-        validator.validateIfUserNotExists(userId);
-        Collection<Item> items = itemRepository.getAllItems(userId);
+        validateIfUserNotExists(userId);
+        Collection<Item> items = itemRepository.findByOwnerId(userId);
         Collection<Long> itemIds = items
                 .stream()
                 .map(Item::getId)
@@ -136,7 +135,7 @@ public class ItemServiceImpl implements ItemService {
                 .orElseThrow(() -> new IdNotFoundException(String.format("Item with id=%d does not exists", itemId)));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IdNotFoundException(String.format("User with id=%d does not exists", userId)));
-        validator.validateIfUserBookedItem(userId, itemId);
+        validateIfUserBookedItem(userId, itemId);
         Comment comment = CommentDTOMapper.fromCreateDTO(user, item, commentDto);
         Comment newComment = commentRepository.save(comment);
         log.info("{} was added", newComment);
@@ -147,7 +146,7 @@ public class ItemServiceImpl implements ItemService {
         Collection<Long> itemIds = items.stream()
                 .map(Item::getId)
                 .toList();
-        Collection<Comment> allComments = commentRepository.getCommentsByItemIds(itemIds);
+        Collection<Comment> allComments = commentRepository.findByItemIdIn(itemIds);
         Map<Long, List<Comment>> map = new HashMap<>();
         for (Comment comment : allComments) {
             Long itemId = comment.getItem().getId();
@@ -169,5 +168,23 @@ public class ItemServiceImpl implements ItemService {
         Collection<Booking> allBookings = bookingRepository.getAllNextBooking(userId, itemIds);
         return allBookings.stream()
                 .collect(Collectors.toMap(b -> b.getItem().getId(), Function.identity()));
+    }
+
+    public void validateIfUserNotExists(long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new IdNotFoundException(String.format("User with id=%d does not exists", userId));
+        }
+    }
+
+    public void validateIfUserBookedItem(long userId, long itemId) {
+        if (!bookingRepository.isUserBookedItem(userId, itemId)) {
+            throw new InternalServerException(String.format("User id=%d did not book item id=%d", userId, itemId));
+        }
+    }
+
+    public void validateIfUserOwnsItem(long userId, long itemId) {
+        if (!itemRepository.existsByIdAndOwner(itemId, userId)) {
+            throw new IdNotFoundException(String.format("User id=%d does not own item id=%d", userId, itemId));
+        }
     }
 }

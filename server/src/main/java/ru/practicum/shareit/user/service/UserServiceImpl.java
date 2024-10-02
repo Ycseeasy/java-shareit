@@ -6,13 +6,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.IdNotFoundException;
+import ru.practicum.shareit.exception.ObjectAlreadyExistsException;
 import ru.practicum.shareit.user.dto.UserCreateDTO;
 import ru.practicum.shareit.user.dto.UserDTO;
 import ru.practicum.shareit.user.dto.UserUpdateDTO;
 import ru.practicum.shareit.user.mapper.UserDTOMapper;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
-import ru.practicum.shareit.utils.Validator;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -24,12 +24,11 @@ import static java.util.Objects.nonNull;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
-    private final Validator validator;
 
     @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public UserDTO createUser(UserCreateDTO userCreateDTO) {
-        validator.validateIfEmailIsUnique(userCreateDTO.getEmail());
+        validateIfEmailIsUnique(userCreateDTO.getEmail());
         User userToCreate = UserDTOMapper.fromCreateDTO(userCreateDTO);
         User createdUser = userRepository.save(userToCreate);
         log.info("{} was created", createdUser);
@@ -39,10 +38,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public UserDTO updateUser(long userId, UserUpdateDTO userUpdateDTO) {
-        validator.validateIfUserNotExists(userId);
+        validateIfUserNotExists(userId);
         String email = userUpdateDTO.getEmail();
         if (nonNull(userUpdateDTO.getEmail())) {
-            validator.validateIfEmailIsUnique(email, userId);
+            validateIfEmailIsUnique(email, userId);
         }
         User oldUser = userRepository.findById(userId)
                 .orElseThrow(() -> new IdNotFoundException(String.format("User with id=%d does not exists", userId)));
@@ -67,7 +66,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(long userId) {
-        validator.validateIfUserNotExists(userId);
+        validateIfUserNotExists(userId);
         userRepository.deleteById(userId);
         log.info("User with id={} deleted", userId);
     }
@@ -85,5 +84,23 @@ public class UserServiceImpl implements UserService {
         return users.stream()
                 .map(UserDTOMapper::toDTO)
                 .toList();
+    }
+
+    public void validateIfUserNotExists(long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new IdNotFoundException(String.format("User with id=%d does not exists", userId));
+        }
+    }
+
+    public void validateIfEmailIsUnique(String email) {
+        if (userRepository.hasEmail(email)) {
+            throw new ObjectAlreadyExistsException("User with email=" + email + " already exists", email);
+        }
+    }
+
+    public void validateIfEmailIsUnique(String email, long userId) {
+        if (userRepository.hasEmail(userId, email)) {
+            throw new ObjectAlreadyExistsException("Duplicate email=" + email, email);
+        }
     }
 }

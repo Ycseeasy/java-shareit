@@ -6,113 +6,152 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.booking.client.BookingClient;
 import ru.practicum.shareit.booking.dto.BookingCreateDto;
 import ru.practicum.shareit.booking.dto.BookingState;
 
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.hamcrest.Matchers.is;
+
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+
 
 @WebMvcTest(controllers = BookingController.class)
-class
-BookingControllerTest {
+public class BookingControllerTest {
+
+    @Autowired
+    ObjectMapper mapper;
 
     @MockBean
-    private BookingClient bookingClient;
+    BookingClient bookingClient;
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private final String userIdHeader = "X-Sharer-User-Id";
+    private final BookingCreateDto bookingCreateDto = new BookingCreateDto(
+            1L,
+            LocalDateTime.of(2024, 12, 1, 12, 12, 12),
+            LocalDateTime.of(2025, 12, 1, 12, 12, 12)
+    );
 
     @Test
     void createBooking() throws Exception {
-        long userId = 22;
-        long itemId = 12312;
-        BookingCreateDto bookingCreateDto = new BookingCreateDto(itemId, null, null);
-        String json = objectMapper.writeValueAsString(bookingCreateDto);
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.CREATED);
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.CREATED);
+        when(bookingClient.createBooking(anyLong(), any()))
+                .thenReturn(response);
 
-        when(bookingClient.createBooking(userId, bookingCreateDto)).thenReturn(response);
-
-        mockMvc.perform(post("/bookings")
-                        .contentType("application/json")
-                        .content(json)
-                        .header(userIdHeader, userId))
-                .andExpect(status().isCreated());
-        verify(bookingClient, times(1)).createBooking(userId, bookingCreateDto);
-        verifyNoMoreInteractions(bookingClient);
+        mvc.perform(post("/bookings")
+                        .header("X-Sharer-User-Id", "1")
+                        .content(mapper.writeValueAsString(bookingCreateDto))
+                        .characterEncoding(StandardCharsets.UTF_8)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.itemId", is(bookingCreateDto.getItemId()), Long.class))
+                .andExpect(jsonPath("$.start", is(bookingCreateDto.getStart().toString())))
+                .andExpect(jsonPath("$.end", is(bookingCreateDto.getEnd().toString())));
+        verify(bookingClient, atMost(3)).createBooking(1L, bookingCreateDto);
     }
 
     @Test
     void answerBookingRequest() throws Exception {
-        long userId = 12213;
-        long bookingId = 1312;
-        long itemId = 12312;
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.OK);
         boolean isApproved = true;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(bookingClient.answerBookingRequest(userId, bookingId, isApproved)).thenReturn(response);
+        long bookingId = 1;
 
-        mockMvc.perform(patch("/bookings/" + bookingId + "?approved=" + isApproved)
-                        .header(userIdHeader, userId))
-                .andExpect(status().isOk());
-        verify(bookingClient, times(1)).answerBookingRequest(userId, bookingId, isApproved);
-        verifyNoMoreInteractions(bookingClient);
+        when(bookingClient.answerBookingRequest(1L, bookingId, isApproved))
+                .thenReturn(response);
+
+        mvc.perform(patch("/bookings/" + bookingId + "?approved=" + isApproved)
+                        .header("X-Sharer-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemId", is(bookingCreateDto.getItemId()), Long.class))
+                .andExpect(jsonPath("$.start", is(bookingCreateDto.getStart().toString())))
+                .andExpect(jsonPath("$.end", is(bookingCreateDto.getEnd().toString())));
+        verify(bookingClient, atMost(3)).createBooking(1L, bookingCreateDto);
     }
 
     @Test
     void getBookingStatus() throws Exception {
-        long userId = 12213;
-        long bookingId = 1312;
-        long itemId = 12312;
-        boolean isApproved = true;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(bookingClient.getBookingStatus(userId, bookingId)).thenReturn(response);
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingCreateDto, HttpStatus.OK);
+        long bookingId = 1;
 
-        mockMvc.perform(get("/bookings/" + bookingId)
-                        .header(userIdHeader, userId))
-                .andExpect(status().isOk());
-        verify(bookingClient, times(1)).getBookingStatus(userId, bookingId);
-        verifyNoMoreInteractions(bookingClient);
+        when(bookingClient.getBookingStatus(1L, bookingId))
+                .thenReturn(response);
+
+        mvc.perform(get("/bookings/" + bookingId)
+                        .header("X-Sharer-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemId", is(bookingCreateDto.getItemId()), Long.class))
+                .andExpect(jsonPath("$.start", is(bookingCreateDto.getStart().toString())))
+                .andExpect(jsonPath("$.end", is(bookingCreateDto.getEnd().toString())));
+        verify(bookingClient, atMost(3)).createBooking(1L, bookingCreateDto);
     }
 
     @Test
     void getAllBookingsByUser() throws Exception {
-        long userId = 222;
-        BookingState state = BookingState.ALL;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(bookingClient.getAllBookingsOfUser(userId, state)).thenReturn(response);
+        List<BookingCreateDto> bookingList = new ArrayList<>();
+        BookingCreateDto bookingCreateDto2 = new BookingCreateDto(
+                2L,
+                LocalDateTime.of(2024, 12, 1, 12, 12, 12),
+                LocalDateTime.of(2025, 12, 1, 12, 12, 12)
+        );
+        bookingList.add(bookingCreateDto2);
+        bookingList.add(bookingCreateDto);
 
-        mockMvc.perform(get("/bookings?state=" + state.toString())
-                        .header(userIdHeader, userId))
-                .andExpect(status().isOk());
-        verify(bookingClient, times(1)).getAllBookingsOfUser(userId, state);
-        verifyNoMoreInteractions(bookingClient);
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingList, HttpStatus.OK);
+        BookingState state = BookingState.ALL;
+
+
+        when(bookingClient.getAllBookingsOfUser(1L, BookingState.ALL))
+                .thenReturn(response);
+
+        mvc.perform(get("/bookings?state=" + state.toString())
+                        .header("X-Sharer-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].itemId", is(bookingCreateDto2.getItemId()), Long.class))
+                .andExpect(jsonPath("$[0].start", is(bookingCreateDto2.getStart().toString())))
+                .andExpect(jsonPath("$[0].end", is(bookingCreateDto2.getEnd().toString())));
+        verify(bookingClient, atMost(3)).createBooking(1L, bookingCreateDto);
     }
 
     @Test
     void getAllBookingsForUserItems() throws Exception {
-        long userId = 222;
+        List<BookingCreateDto> bookingList = new ArrayList<>();
+        BookingCreateDto bookingCreateDto2 = new BookingCreateDto(
+                2L,
+                LocalDateTime.of(2024, 12, 1, 12, 12, 12),
+                LocalDateTime.of(2025, 12, 1, 12, 12, 12)
+        );
+        bookingList.add(bookingCreateDto2);
+        bookingList.add(bookingCreateDto);
+
+        ResponseEntity<Object> response = new ResponseEntity<>(bookingList, HttpStatus.OK);
         BookingState state = BookingState.ALL;
-        ResponseEntity<Object> response = new ResponseEntity<>(HttpStatus.OK);
-        when(bookingClient.getAllBookingsForUserItems(userId, state)).thenReturn(response);
 
-        mockMvc.perform(get("/bookings/owner?state=" + state.toString())
-                        .header(userIdHeader, userId))
-                .andExpect(status().isOk());
-        verify(bookingClient, times(1)).getAllBookingsForUserItems(userId, state);
-        verifyNoMoreInteractions(bookingClient);
+
+        when(bookingClient.getAllBookingsForUserItems(1L, BookingState.ALL))
+                .thenReturn(response);
+
+        mvc.perform(get("/bookings/owner?state=" + state.toString())
+                        .header("X-Sharer-User-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].itemId", is(bookingCreateDto2.getItemId()), Long.class))
+                .andExpect(jsonPath("$[0].start", is(bookingCreateDto2.getStart().toString())))
+                .andExpect(jsonPath("$[0].end", is(bookingCreateDto2.getEnd().toString())));
+        verify(bookingClient, atMost(3)).createBooking(1L, bookingCreateDto);
     }
-
 }

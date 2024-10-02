@@ -19,8 +19,8 @@ import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
-import ru.practicum.shareit.utils.Validator;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -36,8 +36,6 @@ public class BookingServiceImpl implements BookingService {
     private final ItemRepository itemRepository;
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
-    private final Validator validator;
-    private final BookingDTOMapper bookingDTOMapper;
 
     @Override
     @Transactional
@@ -54,7 +52,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(WAITING);
         Booking createdBooking = bookingRepository.save(booking);
         log.info("{} was created", createdBooking);
-        Collection<Comment> itemComments = commentRepository.getCommentsByItem(item.getId());
+        Collection<Comment> itemComments = commentRepository.findByItemId(item.getId());
         return BookingDTOMapper.toDTO(createdBooking, itemComments);
     }
 
@@ -71,7 +69,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(isApproved ? APPROVED : REJECTED);
         Booking savedBooking = bookingRepository.save(booking);
         log.info("User saved answer {} for {} ", isApproved, savedBooking);
-        Collection<Comment> itemComments = commentRepository.getCommentsByItem(savedBooking.getItem().getId());
+        Collection<Comment> itemComments = commentRepository.findByItemId(savedBooking.getItem().getId());
         return BookingDTOMapper.toDTO(savedBooking, itemComments);
     }
 
@@ -85,25 +83,26 @@ public class BookingServiceImpl implements BookingService {
             throw new IdNotFoundException(
                     String.format("User with id=%d is not owner or booker for booking with id=%d", userId, bookingId));
         }
-        Collection<Comment> itemComments = commentRepository.getCommentsByItem(booking.getItem().getId());
+        Collection<Comment> itemComments = commentRepository.findByItemId(booking.getItem().getId());
         return BookingDTOMapper.toDTO(booking, itemComments);
     }
 
     @Override
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<BookingDto> getAllBookingsOfUser(long userId, BookingState state) {
-        validator.validateIfUserNotExists(userId);
+        validateIfUserNotExists(userId);
         List<Booking> bookings = switch (state) {
-            case ALL -> bookingRepository.getAllBookingsOfUser(userId);
-            case PAST -> bookingRepository.getPastBookingsOfUser(userId);
-            case CURRENT -> bookingRepository.getCurrentBookingsOfUser(userId);
-            case FUTURE -> bookingRepository.getFutureBookingsOfUser(userId);
-            case REJECTED -> bookingRepository.getRejectedBookingsOfUser(userId);
-            case WAITING -> bookingRepository.getWaitingBookingsOfUser(userId);
+            case ALL -> bookingRepository.findByBookerIdOrderByStartAsc(userId);
+            case PAST -> bookingRepository.findByBookerIdAndEndBeforeOrderByStartAsc(userId, LocalDateTime.now());
+            case CURRENT -> bookingRepository.findByBookerIdAndStartAfterAndEndBeforeOrderByStartAsc(userId,
+                    LocalDateTime.now(), LocalDateTime.now());
+            case FUTURE -> bookingRepository.findByBookerIdAndStartAfterOrderByStartAsc(userId, LocalDateTime.now());
+            case REJECTED -> bookingRepository.findByBookerIdAndStatusOrderByStartAsc(userId, REJECTED);
+            case WAITING -> bookingRepository.findByBookerIdAndStatusOrderByStartAsc(userId, WAITING);
         };
         return bookings.stream()
                 .map((Booking booking) -> {
-                    Collection<Comment> itemComments = commentRepository.getCommentsByItem(booking.getItem().getId());
+                    Collection<Comment> itemComments = commentRepository.findByItemId(booking.getItem().getId());
                     return BookingDTOMapper.toDTO(booking, itemComments);
                 })
                 .toList();
@@ -113,7 +112,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<BookingDto> getAllBookingsForUserItems(long userId, BookingState state) {
-        validator.validateIfUserNotExists(userId);
+        validateIfUserNotExists(userId);
         List<Booking> bookings = switch (state) {
             case ALL -> bookingRepository.getAllBookingsForUserItems(userId);
             case PAST -> bookingRepository.getPastBookingsForUserItems(userId);
@@ -124,9 +123,15 @@ public class BookingServiceImpl implements BookingService {
         };
         return bookings.stream()
                 .map((Booking booking) -> {
-                    Collection<Comment> itemComments = commentRepository.getCommentsByItem(booking.getItem().getId());
+                    Collection<Comment> itemComments = commentRepository.findByItemId(booking.getItem().getId());
                     return BookingDTOMapper.toDTO(booking, itemComments);
                 })
                 .toList();
+    }
+
+    public void validateIfUserNotExists(long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new IdNotFoundException(String.format("User with id=%d does not exists", userId));
+        }
     }
 }

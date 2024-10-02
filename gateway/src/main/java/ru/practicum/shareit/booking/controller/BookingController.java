@@ -26,6 +26,7 @@ import ru.practicum.shareit.booking.dto.BookingState;
 @RequiredArgsConstructor
 @Slf4j
 public class BookingController {
+
     private final BookingClient bookingClient;
 
     @PostMapping

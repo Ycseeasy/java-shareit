@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 @Builder
 @EqualsAndHashCode
 public class BookingCreateDto {
+
     @Positive
     private long itemId;
     @FutureOrPresent
