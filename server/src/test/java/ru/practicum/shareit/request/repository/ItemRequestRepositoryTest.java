@@ -11,11 +11,14 @@ public class ItemRequestRepositoryTest {
     private ItemRequestRepository repository;
 
     @Test
-    void findByIdTest() {}
+    void findByIdTest() {
+    }
 
     @Test
-    void findByRequestorIdOrderByCreatedAsc() {}
+    void findByRequestorIdOrderByCreatedAsc() {
+    }
 
     @Test
-    void findByRequestorIdNotOrderByCreatedAsc() {}
+    void findByRequestorIdNotOrderByCreatedAsc() {
+    }
 }
